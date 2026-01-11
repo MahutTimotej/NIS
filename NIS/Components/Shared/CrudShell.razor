@@ -1,0 +1,46 @@
+﻿<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card-nis">
+            <div class="card-header">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="me-auto">@Title</div>
+
+                    <div class="input-group" style="max-width: 420px;">
+                        <span class="input-group-text nis-pill"><span class="fw-bold">🔎</span></span>
+                        <input class="form-control" placeholder="@SearchPlaceholder"
+                               @bind="SearchText" @bind:event="oninput" />
+                        <button class="btn nis-btn btn-nis-outline" @onclick="OnSearch">Hladat</button>
+                    </div>
+
+                    <button class="btn nis-btn btn-nis-primary" @onclick="OnNew">Novy</button>
+                    <button class="btn nis-btn btn-nis-outline" @onclick="OnReload">Reload</button>
+                </div>
+            </div>
+            <div class="card-body">
+                @ListContent
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card-nis">
+            <div class="card-header">@FormTitle</div>
+            <div class="card-body">
+                @FormContent
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? Title { get; set; }
+    [Parameter] public RenderFragment? FormTitle { get; set; }
+    [Parameter] public RenderFragment? ListContent { get; set; }
+    [Parameter] public RenderFragment? FormContent { get; set; }
+
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search...";
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback OnSearch { get; set; }
+    [Parameter] public EventCallback OnReload { get; set; }
+    [Parameter] public EventCallback OnNew { get; set; }
+}

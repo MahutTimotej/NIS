@@ -1,0 +1,51 @@
+﻿@page "/about"
+
+<div class="nis-home">
+
+    <section class="card-nis nis-hero mb-3">
+        <div class="p-4 p-md-5">
+            <h1 class="mb-1">About</h1>
+            <div class="nis-muted">Informácie o aplikácii NIS.</div>
+        </div>
+    </section>
+
+    <section class="card-nis mb-3">
+        <div class="card-header">Nemocničný informačný systém (NIS)</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-lg-7">
+                    <p class="nis-muted mb-3">
+                        Študentská aplikácia pre evidenciu pacientov, personálu a zdravotných záznamov.
+                        Frontend je Blazor, dáta sú v Oracle DB.
+                    </p>
+
+                    <ul class="nis-list">
+                        <li><span class="bi bi-check2-circle"></span> Moduly: pacienti, lekári, sestry, príjmy, vyšetrenia, operácie, predpisy</li>
+                        <li><span class="bi bi-check2-circle"></span> Full CRUD priamo v stránke plus vyhľadávanie</li>
+                        <li><span class="bi bi-check2-circle"></span> Prepojenia cez EF Core (DB väzby, FK)</li>
+                    </ul>
+                </div>
+
+                <div class="col-12 col-lg-5">
+                    <div class="nis-module">
+                        <div class="fw-bold mb-2"><span class="bi bi-stack me-2"></span>Technológie</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="nis-tag">.NET 8</span>
+                            <span class="nis-tag">Blazor</span>
+                            <span class="nis-tag">EF Core</span>
+                            <span class="nis-tag">Oracle XE</span>
+                            <span class="nis-tag">Bootstrap</span>
+                        </div>
+
+                        <hr class="my-3" />
+
+                        <div class="nis-muted">
+                            Navigácia hore slúži ako hlavné menu. Klik na NIS vľavo hore ťa vždy vráti na Dashboard.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>

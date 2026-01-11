@@ -1,0 +1,44 @@
+﻿@page "/prijmy"
+@inject NisDbContext Db
+
+<h3>Príjmy (hospitalizácie)</h3>
+
+@if (items is null)
+{
+    <p>Načítavam...</p>
+}
+else
+{
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Pacient (ID)</th>
+                <th>Izba (ID)</th>
+                <th>Dátum prijmu</th>
+                <th>Dátum prepustenia</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in items)
+            {
+                <tr>
+                    <td>@p.ID_PRIJMU</td>
+                    <td>@p.ID_PACIENTA</td>
+                    <td>@p.ID_IZBY</td>
+                    <td>@p.DATUM_PRIJMU</td>
+                    <td>@p.DATUM_PREPUSTENIA</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<N_PRIJEM>? items;
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await Db.N_PRIJEMs.AsNoTracking().ToListAsync();
+    }
+}

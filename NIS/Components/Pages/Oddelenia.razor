@@ -1,0 +1,42 @@
+﻿@page "/oddelenia"
+@inject NisDbContext Db
+
+<h3>Oddelenia</h3>
+
+@if (items is null)
+{
+    <p>Načítavam...</p>
+}
+else
+{
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Názov</th>
+                <th>Poschodie</th>
+                <th>Kapacita</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var o in items)
+            {
+                <tr>
+                    <td>@o.ID_ODDELENIA</td>
+                    <td>@o.NAZOV</td>
+                    <td>@o.POSCHODIE</td>
+                    <td>@o.KAPACITA</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<N_ODDELENIE>? items;
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await Db.N_ODDELENIEs.AsNoTracking().ToListAsync();
+    }
+}

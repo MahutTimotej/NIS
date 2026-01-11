@@ -1,0 +1,518 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using Microsoft.EntityFrameworkCore.Metadata
+@using System.Text
+@using System.Globalization
+@using System.Linq
+@using System.Collections
+@using System.Reflection
+
+@inject NIS.Data.NisDbContext Db
+
+<CrudShell SearchPlaceholder="@SearchPlaceholder" SearchText="@_q" OnSearch="Reload" OnReload="Reload" OnNew="NewItem">
+    <Title>
+        <span class="d-flex align-items-center gap-2">
+            <span class="fw-bold">@Title</span>
+            <span class="nis-muted">(@Table)</span>
+            <span class="badge text-bg-light nis-pill">rows: @_rows.Count</span>
+        </span>
+    </Title>
+
+    <FormTitle>
+        <span>@(_isNew ? "Novy zaznam" : "Edit zaznam")</span>
+    </FormTitle>
+
+    <ListContent>
+        <Alert Message="@_err" CssClass="alert-danger" />
+        <Alert Message="@_msg" CssClass="alert-success" />
+
+        @if (_entityType is null)
+        {
+            <div class="alert alert-warning">
+                Tabulka <b>@Table</b> sa nenasla v EF modeli. Skontroluj nazov tabulky alebo schema.
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="nis-muted">Tip: klikni na riadok, uprav vpravo, Save.</span>
+                <span class="ms-auto nis-muted">page @_page / @_totalPages</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table nis-table align-middle">
+                    <thead>
+                        <tr>
+                            @foreach (var p in _displayProps)
+                            {
+                                <th title="@p.ClrType.Name">@p.Name</th>
+                            }
+                            <th style="width: 140px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in PagedRows())
+                        {
+                            <tr class="nis-row" style="cursor:pointer" @onclick="() => SelectRow(row)">
+                                @foreach (var p in _displayProps)
+                                {
+                                    <td>@FormatValue(row, p)</td>
+                                }
+                                <td class="text-end">
+                                    <button class="btn btn-sm nis-btn btn-nis-outline me-1" @onclick:stopPropagation="true" @onclick="() => SelectRow(row)">Edit</button>
+                                    <button class="btn btn-sm nis-btn btn-nis-danger" @onclick:stopPropagation="true" @onclick="() => DeleteRow(row)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mt-2">
+                <div class="d-flex gap-2">
+                    <button class="btn nis-btn btn-nis-outline" disabled="@(_page <= 1)" @onclick="PrevPage">Prev</button>
+                    <button class="btn nis-btn btn-nis-outline" disabled="@(_page >= _totalPages)" @onclick="NextPage">Next</button>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <span class="nis-muted">Page size</span>
+                    <select class="form-select" style="width: 120px;" @onchange="OnPageSizeChanged">
+                        @foreach (var ps in new int[] { 10, 20, 50, 100 })
+                        {
+                            <option value="@ps" selected="@(ps == _pageSize)">@ps</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        }
+    </ListContent>
+
+    <FormContent>
+        <div class="nis-form">
+            <Alert Message="@_formErr" CssClass="alert-danger" />
+
+            @if (_entityType is null)
+            {
+                <div class="nis-muted">Nie je co editovat.</div>
+            }
+            else
+            {
+                @if (_edit is null)
+                {
+                    <div class="nis-muted">Klikni na Novy alebo vyber riadok.</div>
+                }
+                else
+                {
+                    <div class="d-flex gap-2 mb-2">
+                        <button class="btn nis-btn btn-nis-primary flex-grow-1" @onclick="Save">Save</button>
+                        <button class="btn nis-btn btn-nis-outline" @onclick="NewItem">Cancel</button>
+                    </div>
+
+                    <details class="mb-2" open>
+                        <summary class="nis-muted">Polia</summary>
+                        <div class="mt-2">
+                            @foreach (var p in _editProps)
+                            {
+                                <DynamicField Model="_edit" Property="p" ReadOnly="@IsReadOnly(p)" Hint="@HintFor(p)" />
+                            }
+                        </div>
+                    </details>
+
+                    <details class="mb-2">
+                        <summary class="nis-muted">Primary key</summary>
+                        <div class="mt-2">
+                            @foreach (var kp in _keyProps)
+                            {
+                                <div class="nis-muted">@kp.Name: <b>@(FormatValue(_edit, kp))</b></div>
+                            }
+                        </div>
+                    </details>
+                }
+            }
+        </div>
+    </FormContent>
+</CrudShell>
+
+@code {
+    [Parameter, EditorRequired] public string Table { get; set; } = "";
+    [Parameter] public string Title { get; set; } = "Tabulka";
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search...";
+
+    private string _q = "";
+    private string? _msg;
+    private string? _err;
+    private string? _formErr;
+
+    private IEntityType? _entityType;
+    private List<IProperty> _keyProps = new();
+    private List<IProperty> _displayProps = new();
+    private List<IProperty> _editProps = new();
+
+    private List<object> _rows = new();
+    private object? _edit;
+    private bool _isNew = true;
+
+    private int _pageSize = 20;
+    private int _page = 1;
+    private int _totalPages = 1;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ResolveEntityType();
+        await Reload();
+        NewItem();
+    }
+
+    private void ResolveEntityType()
+    {
+        _entityType = null;
+        _keyProps.Clear();
+        _displayProps.Clear();
+        _editProps.Clear();
+
+        if (string.IsNullOrWhiteSpace(Table))
+            return;
+
+        var et = Db.Model.GetEntityTypes()
+            .FirstOrDefault(t =>
+            {
+                try
+                {
+                    var tn = t.GetTableName();
+                    return tn != null && string.Equals(tn, Table, StringComparison.OrdinalIgnoreCase);
+                }
+                catch { return false; }
+            });
+
+        _entityType = et;
+        if (_entityType is null) return;
+
+        var pk = _entityType.FindPrimaryKey();
+        if (pk != null) _keyProps = pk.Properties.ToList();
+
+        bool IsSupported(IProperty p)
+        {
+            var u = Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType;
+            if (u == typeof(byte[])) return false;
+            if (u == typeof(object)) return false;
+            if (p.IsShadowProperty()) return false;
+            if (p.PropertyInfo is null) return false;
+            return u == typeof(string) || u == typeof(int) || u == typeof(long) || u == typeof(short) ||
+                   u == typeof(decimal) || u == typeof(double) || u == typeof(float) ||
+                   u == typeof(bool) || u == typeof(DateTime);
+        }
+
+        var props = _entityType.GetProperties().Where(IsSupported).ToList();
+
+        var keys = props.Where(p => _keyProps.Any(k => k.Name == p.Name)).ToList();
+        var rest = props.Where(p => keys.All(k => k.Name != p.Name)).ToList();
+
+        _displayProps = keys.Concat(rest).Take(8).ToList();
+        _editProps = keys.Concat(rest).ToList();
+    }
+
+    private IQueryable<object> QuerySet()
+    {
+        if (_entityType is null)
+            return Enumerable.Empty<object>().AsQueryable();
+
+        var setMethod = typeof(DbContext)
+            .GetMethods()
+            .Single(m => m.Name == nameof(DbContext.Set)
+                         && m.IsGenericMethodDefinition
+                         && m.GetParameters().Length == 0);
+
+        var generic = setMethod.MakeGenericMethod(_entityType.ClrType);
+        var setObj = generic.Invoke(Db, null)!; 
+
+        return ((IQueryable)setObj).Cast<object>(); 
+    }
+
+    private async Task LoadRows()
+    {
+        if (_entityType is null)
+        {
+            _rows = new();
+            _totalPages = 1;
+            _page = 1;
+            return;
+        }
+
+        var list = await QueryListNoTrackingAsync();
+
+        var q = (_q ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var ql = q.ToLowerInvariant();
+            list = list.Where(o => RowMatches(o, ql)).ToList();
+        }
+
+        _rows = list;
+        _page = 1;
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_rows.Count / (double)_pageSize));
+    }
+
+    private bool RowMatches(object row, string ql)
+    {
+        var sb = new StringBuilder();
+        foreach (var p in _editProps)
+        {
+            try
+            {
+                var v = p.PropertyInfo?.GetValue(row);
+                if (v is null) continue;
+                sb.Append(v.ToString());
+                sb.Append(' ');
+            }
+            catch { }
+        }
+        return sb.ToString().ToLowerInvariant().Contains(ql);
+    }
+
+    private IEnumerable<object> PagedRows()
+    {
+        if (_rows.Count == 0) return Enumerable.Empty<object>();
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_rows.Count / (double)_pageSize));
+        _page = Math.Clamp(_page, 1, _totalPages);
+
+        return _rows.Skip((_page - 1) * _pageSize).Take(_pageSize);
+    }
+
+    private void PrevPage() => _page = Math.Max(1, _page - 1);
+    private void NextPage() => _page = Math.Min(_totalPages, _page + 1);
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var ps))
+        {
+            _pageSize = ps;
+            _page = 1;
+        }
+    }
+
+    private string FormatValue(object obj, IProperty p)
+    {
+        try
+        {
+            var v = p.PropertyInfo?.GetValue(obj);
+            if (v is null) return "";
+            if (v is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm");
+            return v.ToString() ?? "";
+        }
+        catch { return ""; }
+    }
+
+    private void SelectRow(object row)
+    {
+        _formErr = null;
+        _msg = null;
+        _err = null;
+
+        _isNew = false;
+        _edit = Clone(row);
+    }
+
+    private object Clone(object source)
+    {
+        var t = _entityType!.ClrType;
+        var copy = Activator.CreateInstance(t)!;
+
+        foreach (var p in _editProps)
+        {
+            try
+            {
+                var v = p.PropertyInfo?.GetValue(source);
+                p.PropertyInfo?.SetValue(copy, v);
+            }
+            catch { }
+        }
+        return copy;
+    }
+
+    private void NewItem()
+    {
+        _formErr = null;
+        _msg = null;
+        _err = null;
+
+        _isNew = true;
+        if (_entityType is null) { _edit = null; return; }
+
+        var t = _entityType.ClrType;
+        _edit = Activator.CreateInstance(t);
+
+        foreach (var p in _editProps)
+        {
+            var u = Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType;
+            if (u == typeof(string) && p.PropertyInfo != null)
+            {
+                try { p.PropertyInfo.SetValue(_edit, ""); } catch { }
+            }
+            if (u == typeof(DateTime) && p.PropertyInfo != null)
+            {
+                try
+                {
+                    var curr = p.PropertyInfo.GetValue(_edit);
+                    if (curr is DateTime dt && dt == default) p.PropertyInfo.SetValue(_edit, DateTime.Now);
+                }
+                catch { }
+            }
+        }
+    }
+
+    private object?[] GetKeyValues(object entity)
+    {
+        return _keyProps.Select(k =>
+        {
+            try { return k.PropertyInfo?.GetValue(entity); }
+            catch { return null; }
+        }).ToArray();
+    }
+
+    private bool IsReadOnly(IProperty p)
+    {
+        if (_isNew)
+        {
+            var isKey = _keyProps.Any(k => k.Name == p.Name);
+            if (isKey)
+            {
+                if (p.ValueGenerated != ValueGenerated.Never) return true;
+            }
+        }
+        return false;
+    }
+
+    private string? HintFor(IProperty p)
+    {
+        var isKey = _keyProps.Any(k => k.Name == p.Name);
+        if (isKey && p.ValueGenerated != ValueGenerated.Never) return "PK generovane DB (nechaj prazdne)";
+        if (!p.IsNullable) return "NOT NULL";
+        return null;
+    }
+
+    private async Task Save()
+    {
+        _formErr = null;
+        _msg = null;
+        _err = null;
+
+        if (_entityType is null || _edit is null) return;
+
+        try
+        {
+            if (_isNew)
+            {
+                Db.Add(_edit);
+                await Db.SaveChangesAsync();
+                _msg = "Ulozene.";
+            }
+            else
+            {
+                var keys = GetKeyValues(_edit);
+                if (keys.Any(k => k is null))
+                {
+                    _formErr = "Chyba: primary key je prazdny.";
+                    return;
+                }
+
+                var existing = await Db.FindAsync(_entityType.ClrType, keys!);
+                if (existing is null)
+                {
+                    _formErr = "Zaznam sa nenasiel.";
+                    return;
+                }
+
+                Db.Entry(existing).CurrentValues.SetValues(_edit);
+                await Db.SaveChangesAsync();
+                _msg = "Upravene.";
+            }
+
+            await LoadRows();
+            NewItem();
+        }
+        catch (Exception ex)
+        {
+            _formErr = ex.Message;
+        }
+    }
+
+    private IQueryable GetQueryableNoTracking()
+    {
+        if (_entityType is null) throw new InvalidOperationException("EntityType is null.");
+
+        // Db.Set<T>()
+        var setMethod = typeof(DbContext).GetMethod(nameof(DbContext.Set), Type.EmptyTypes)!;
+        var genericSet = setMethod.MakeGenericMethod(_entityType.ClrType);
+        var set = (IQueryable)genericSet.Invoke(Db, null)!; // IQueryable<T>
+
+        // AsNoTracking<T>(IQueryable<T>)
+        var asNoTracking = typeof(EntityFrameworkQueryableExtensions)
+            .GetMethods()
+            .First(m => m.Name == "AsNoTracking" && m.GetParameters().Length == 1)
+            .MakeGenericMethod(_entityType.ClrType);
+
+        return (IQueryable)asNoTracking.Invoke(null, new object[] { set })!;
+    }
+
+    private async Task<List<object>> QueryListNoTrackingAsync()
+    {
+        if (_entityType is null) return new List<object>();
+
+        var q = GetQueryableNoTracking();
+
+        // ToListAsync<T>(IQueryable<T>, CancellationToken)
+        var toListAsync = typeof(EntityFrameworkQueryableExtensions)
+            .GetMethods()
+            .First(m => m.Name == "ToListAsync" && m.GetParameters().Length == 2)
+            .MakeGenericMethod(_entityType.ClrType);
+
+        var taskObj = toListAsync.Invoke(null, new object[] { q, CancellationToken.None })!;
+        await (Task)taskObj;
+
+        var result = taskObj.GetType().GetProperty("Result")!.GetValue(taskObj)!;
+        return ((IEnumerable)result).Cast<object>().ToList();
+    }
+
+    private async Task DeleteRow(object row)
+    {
+        _formErr = null;
+        _msg = null;
+        _err = null;
+
+        if (_entityType is null) return;
+
+        try
+        {
+            var keys = _keyProps.Select(k => k.PropertyInfo?.GetValue(row)).ToArray();
+            if (keys.Any(k => k is null))
+            {
+                _err = "Neviem zistit primary key.";
+                return;
+            }
+
+            var existing = await Db.FindAsync(_entityType.ClrType, keys!);
+            if (existing is null)
+            {
+                _err = "Zaznam sa nenasiel.";
+                return;
+            }
+
+            Db.Remove(existing);
+            await Db.SaveChangesAsync();
+            _msg = "Zmazane.";
+            await LoadRows();
+            if (!_isNew) NewItem();
+        }
+        catch (Exception ex)
+        {
+            _err = ex.Message;
+        }
+    }
+
+    private async Task Reload()
+    {
+        _msg = null;
+        _err = null;
+        _formErr = null;
+        await LoadRows();
+    }
+}
