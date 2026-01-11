@@ -1,0 +1,49 @@
+﻿@implements IDisposable
+
+<div class="nis-footerbar">
+    <span class="nis-dot"></span>
+
+    <div class="small fw-semibold">
+        @if (!string.IsNullOrWhiteSpace(Schema))
+        {
+            <span class="nis-muted">· @Schema</span>
+        }
+    </div>
+
+    <div class="nis-footer-right">
+        @if (!string.IsNullOrWhiteSpace(Connection))
+        {
+            <span class="nis-badge small">@Connection</span>
+        }
+
+        <span class="nis-muted small">Posledná aktualizácia:</span>
+        <span class="small fw-semibold">@_nowText</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Connection { get; set; }
+    [Parameter] public string? Schema { get; set; }
+
+    private string _nowText = "";
+    private System.Threading.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        Tick();
+
+        _timer = new System.Threading.Timer(_ =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                Tick();
+                StateHasChanged();
+            });
+        }, null, 1000, 1000);
+    }
+
+    private void Tick()
+        => _nowText = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+
+    public void Dispose() => _timer?.Dispose();
+}
