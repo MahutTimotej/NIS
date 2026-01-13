@@ -237,7 +237,6 @@
         }
         catch (DbUpdateException ex) when (ex.InnerException is Oracle.ManagedDataAccess.Client.OracleException oex && oex.Number == 1)
         {
-            // ORA-00001
             Notify.Error("Nepodarilo sa uložiť: konflikt unikátneho kľúča (pravdepodobne ID/sekvencia).");
         }
         catch (Exception ex)
