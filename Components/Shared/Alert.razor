@@ -1,11 +1,61 @@
-﻿@if (!string.IsNullOrWhiteSpace(Message))
+﻿@using NIS.Services
+@inject NotificationService Notify
+@implements IDisposable
+
+@if (_msg is not null)
 {
-    <div class="alert @CssClass" role="alert">
-        @Message
+    <div class="alert alert-@_msg.Type d-flex align-items-center justify-content-between mt-2" role="alert">
+        <div>@_msg.Text</div>
+        <button type="button" class="btn-close" aria-label="Close" @onclick="Clear"></button>
     </div>
 }
 
 @code {
-    [Parameter] public string? Message { get; set; }
-    [Parameter] public string CssClass { get; set; } = "alert-info";
+    private NotificationMessage? _msg;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized()
+    {
+        Notify.OnMessage += Show;
+    }
+
+    private void Show(NotificationMessage msg)
+    {
+        _msg = msg;
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        _ = AutoHideAsync(msg.DurationMs, token);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AutoHideAsync(int ms, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(ms, token);
+            if (!token.IsCancellationRequested)
+            {
+                _msg = null;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { }
+    }
+
+    private void Clear()
+    {
+        _cts?.Cancel();
+        _msg = null;
+    }
+
+    public void Dispose()
+    {
+        Notify.OnMessage -= Show;
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
 }

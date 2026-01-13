@@ -1,116 +1,159 @@
 ﻿@page "/diagnozy"
+@rendermode InteractiveServer
+
 @using Microsoft.EntityFrameworkCore
 @using NIS.Data
-@using NIS.Components.Shared
-@inject NisDbContext Db
+@using NIS.Data.Models
 
-<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
-    <div>
-        <h3 class="mb-0">Diagnózy</h3>
-        <div class="nis-muted small">Vyhľadávanie a zoradenie podľa stĺpcov.</div>
+@inject IDbContextFactory<NisDbContext> DbFactory
+
+<h2 class="mb-3">Diagnózy</h2>
+
+<div class="card-nis mb-3">
+    <div class="card-header fw-semibold">
+        Nová diagnóza
     </div>
 
-    <div class="d-flex gap-2 align-items-center">
-        <div class="input-group" style="min-width: 320px;">
-            <span class="input-group-text"><span class="bi bi-search"></span></span>
-            <input class="form-control"
-                   placeholder="Hľadať (ID, kód, názov)..."
-                   @bind-value="_q"
-                   @bind-value:event="oninput" />
-            <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch" disabled="@string.IsNullOrWhiteSpace(_q)">
-                <span class="bi bi-x-lg"></span>
-            </button>
-        </div>
+    <div class="card-body">
+        <EditForm Model="_new" OnValidSubmit="CreateAsync">
+            <DataAnnotationsValidator />
 
-        <span class="nis-tag">@View.Count() záznamov</span>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <InputText class="form-control" placeholder="Kód" @bind-Value="_new.Kod" />
+                </div>
+
+                <div class="col-md-4">
+                    <InputText class="form-control" placeholder="Názov" @bind-Value="_new.Nazov" />
+                </div>
+
+                <div class="col-md-5">
+                    <InputText class="form-control" placeholder="Popis" @bind-Value="_new.Popis" />
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button class="btn nis-btn btn-nis-primary" type="submit">
+                    Uložiť
+                </button>
+            </div>
+        </EditForm>
     </div>
 </div>
 
-@if (items is null)
-{
-    <p>Načítavam...</p>
-}
-else
-{
-    <div class="card-nis">
-        <div class="card-body">
-            <table class="table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <SortTh Title="ID" Column="ID" SortColumn="_sortCol" SortAsc="_sortAsc" OnSort="ToggleSort" />
-                        <SortTh Title="Kód" Column="KOD" SortColumn="_sortCol" SortAsc="_sortAsc" OnSort="ToggleSort" />
-                        <SortTh Title="Názov" Column="NAZOV" SortColumn="_sortCol" SortAsc="_sortAsc" OnSort="ToggleSort" />
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var d in View)
-                    {
-                        <tr>
-                            <td>@d.ID_DIAGNOZY</td>
-                            <td>@d.KOD</td>
-                            <td>@d.NAZOV</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
+<NisTable @key="_tableKey"
+          TItem="N_DIAGNOZA"
+          Title="Zoznam diagnóz"
+          SearchPlaceholder="Hľadať (ID, kód, názov, popis)..."
+          PageSize="50"
+          Colspan="5"
+          Query="Query"
+          Filter="Filter"
+          Sort="Sort">
+
+    <Header Context="h">
+    <th>ID</th>
+    <th>Kód</th>
+    <th>Názov</th>
+    <th>Popis</th>
+    <th style="width:120px;">Akcie</th>
+    </Header>
+
+    <Row Context="d">
+        <tr>
+            <td>@d.ID_DIAGNOZY</td>
+            <td>@d.KOD</td>
+            <td class="fw-semibold">@d.NAZOV</td>
+            <td class="nis-muted">@d.POPIS</td>
+            <td>
+                @if (_deleteId == d.ID_DIAGNOZY)
+                {
+                    <button class="btn btn-sm btn-danger me-1"
+                            @onclick="() => ConfirmDeleteAsync(d.ID_DIAGNOZY)">
+                        Áno
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            @onclick="CancelDelete">
+                        Nie
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-sm btn-danger"
+                            @onclick="() => AskDelete(d.ID_DIAGNOZY)">
+                        X
+                    </button>
+                }
+            </td>
+        </tr>
+    </Row>
+
+</NisTable>
 
 @code {
-    private List<N_DIAGNOZA>? items;
+    private int _tableKey = 0;
+    private decimal? _deleteId;
 
-    private string _q = "";
-    private string _sortCol = "ID";
-    private bool _sortAsc = true;
+    private NewDiagnoza _new = new();
 
-    protected override async Task OnInitializedAsync()
+    private sealed class NewDiagnoza
     {
-        items = await Db.N_DIAGNOZAs.AsNoTracking().ToListAsync();
+        public string Kod { get; set; } = "";
+
+        public string Nazov { get; set; } = "";
+
+        public string? Popis { get; set; }
     }
 
-    private void ClearSearch() => _q = "";
+    IQueryable<N_DIAGNOZA> Query(NisDbContext db)
+        => db.N_DIAGNOZAs.AsNoTracking();
 
-    private void ToggleSort(string col)
+    IQueryable<N_DIAGNOZA> Filter(IQueryable<N_DIAGNOZA> q, string t)
     {
-        if (_sortCol == col) _sortAsc = !_sortAsc;
-        else { _sortCol = col; _sortAsc = true; }
+        var s = t.ToUpper();
+        return q.Where(x =>
+            EF.Functions.Like(x.ID_DIAGNOZY.ToString(), $"%{t}%") ||
+            EF.Functions.Like((x.KOD ?? "").ToUpper(), $"%{s}%") ||
+            EF.Functions.Like((x.NAZOV ?? "").ToUpper(), $"%{s}%") ||
+            EF.Functions.Like((x.POPIS ?? "").ToUpper(), $"%{s}%")
+        );
     }
 
-    private IEnumerable<N_DIAGNOZA> View
+    IQueryable<N_DIAGNOZA> Sort(IQueryable<N_DIAGNOZA> q, string c, bool a)
+        => q.OrderBy(x => x.ID_DIAGNOZY);
+
+    private async Task CreateAsync()
     {
-        get
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        db.N_DIAGNOZAs.Add(new N_DIAGNOZA
         {
-            if (items is null) return Enumerable.Empty<N_DIAGNOZA>();
+            KOD = _new.Kod.Trim(),
+            NAZOV = _new.Nazov.Trim(),
+            POPIS = string.IsNullOrWhiteSpace(_new.Popis) ? null : _new.Popis.Trim()
+        });
 
-            IEnumerable<N_DIAGNOZA> q = items;
+        await db.SaveChangesAsync();
 
-            // filter
-            if (!string.IsNullOrWhiteSpace(_q))
-            {
-                var s = _q.Trim().ToLowerInvariant();
-                q = q.Where(d =>
-                    d.ID_DIAGNOZY.ToString().Contains(s) ||
-                    (d.KOD ?? "").ToLowerInvariant().Contains(s) ||
-                    (d.NAZOV ?? "").ToLowerInvariant().Contains(s));
-            }
+        _new = new();
+        _tableKey++;
+    }
 
-            // sort
-            q = (_sortCol, _sortAsc) switch
-            {
-                ("ID", true) => q.OrderBy(x => x.ID_DIAGNOZY),
-                ("ID", false) => q.OrderByDescending(x => x.ID_DIAGNOZY),
+    private void AskDelete(decimal id) => _deleteId = id;
+    private void CancelDelete() => _deleteId = null;
 
-                ("KOD", true) => q.OrderBy(x => x.KOD),
-                ("KOD", false) => q.OrderByDescending(x => x.KOD),
+    private async Task ConfirmDeleteAsync(decimal id)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
 
-                ("NAZOV", true) => q.OrderBy(x => x.NAZOV),
-                ("NAZOV", false) => q.OrderByDescending(x => x.NAZOV),
-
-                _ => q
-            };
-
-            return q;
+        var d = await db.N_DIAGNOZAs.FindAsync(id);
+        if (d != null)
+        {
+            db.N_DIAGNOZAs.Remove(d);
+            await db.SaveChangesAsync();
         }
+
+        _deleteId = null;
+        _tableKey++;
     }
 }

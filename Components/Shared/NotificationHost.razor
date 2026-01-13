@@ -1,0 +1,26 @@
+﻿@using NIS.Services
+@inject NotificationService Notify
+@implements IDisposable
+
+@if (_msg is not null)
+{
+    <div class="alert alert-@_msg.Type mt-2">
+        @_msg.Text
+    </div>
+}
+
+@code {
+    private NotificationMessage? _msg;
+
+    protected override void OnInitialized()
+        => Notify.OnMessage += Show;
+
+    private void Show(NotificationMessage msg)
+    {
+        _msg = msg;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+        => Notify.OnMessage -= Show;
+}

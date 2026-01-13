@@ -1,40 +1,36 @@
 ﻿@page "/sestry"
-@inject NisDbContext Db
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
 
-<h3>Sestry</h3>
+<NisTable TItem="N_SESTRA"
+          Title="Sestry"
+          Subtitle="Zoznam sestier."
+          SearchPlaceholder="Hľadať (ID, rodné číslo)..."
+          PageSize="50"
+          Colspan="3"
+          Query="q"
+          Filter="f"
+          Sort="s">
 
-@if (items is null)
-{
-    <p>Načítavam...</p>
-}
-else
-{
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Rodné číslo</th>
-                <th>Oddelenie (ID)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var s in items)
-            {
-                <tr>
-                    <td>@s.ID_SESTRY</td>
-                    <td>@s.RODNE_CISLO</td>
-                    <td>@s.ID_ODDELENIA</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    <Header Context="h">
+    <th>ID</th>
+    <th>Rodné číslo</th>
+    <th>Oddelenie</th>
+    </Header>
+
+    <Row Context="s">
+        <tr>
+            <td>@s.ID_SESTRY</td>
+            <td>@s.RODNE_CISLO</td>
+            <td>@s.ID_ODDELENIA</td>
+        </tr>
+    </Row>
+</NisTable>
 
 @code {
-    private List<N_SESTRA>? items;
-
-    protected override async Task OnInitializedAsync()
-    {
-        items = await Db.N_SESTRAs.AsNoTracking().ToListAsync();
-    }
+    IQueryable<N_SESTRA> q(NisDbContext db) => db.N_SESTRAs.AsNoTracking();
+    IQueryable<N_SESTRA> f(IQueryable<N_SESTRA> q, string t)
+        => q.Where(x => EF.Functions.Like(x.RODNE_CISLO, $"%{t}%"));
+    IQueryable<N_SESTRA> s(IQueryable<N_SESTRA> q, string c, bool a)
+        => q.OrderBy(x => x.ID_SESTRY);
 }

@@ -1,44 +1,268 @@
 ﻿@page "/operacie"
-@inject NisDbContext Db
+@rendermode InteractiveServer
 
-<h3>Operácie</h3>
+@using Microsoft.EntityFrameworkCore
+@using NIS.Data
+@using NIS.Data.Models
+@using NIS.Services
+@using System.ComponentModel.DataAnnotations
 
-@if (items is null)
+@inject IDbContextFactory<NisDbContext> DbFactory
+@inject NotificationService Notify
+
+<Alert />
+
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+    <div>
+        <h2 class="mb-0">Operácie</h2>
+        <div class="nis-muted small">CRUD + live search + sort</div>
+    </div>
+
+    <button class="btn nis-btn btn-nis-primary" @onclick="NewOp" disabled="@_busy">
+        <span class="bi bi-plus-lg me-2"></span> Nová operácia
+    </button>
+</div>
+
+@if (_formOpen)
 {
-    <p>Načítavam...</p>
+    <div class="card-nis mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>@(_isNew ? "Nová operácia" : $"Edit operácie (ID: {_edit.IdOperacie})")</div>
+            <button class="btn btn-sm nis-btn btn-nis-outline" @onclick="CloseForm" disabled="@_busy">X</button>
+        </div>
+
+        <div class="card-body">
+            <EditForm Model="_edit" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Pacient (ID)</label>
+                        <InputNumber class="form-control" @bind-Value="_edit.IdPacienta" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Lekár (ID)</label>
+                        <InputNumber class="form-control" @bind-Value="_edit.IdLekara" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Dátum a čas</label>
+                        <InputDate class="form-control" @bind-Value="_edit.Datum" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Typ</label>
+                        <InputText class="form-control" @bind-Value="_edit.Typ" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Popis</label>
+                        <InputTextArea class="form-control" @bind-Value="_edit.Popis" />
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn nis-btn btn-nis-primary" disabled="@_busy">Uložiť</button>
+                    <button type="button" class="btn nis-btn btn-nis-outline" @onclick="CloseForm">Zrušiť</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
 }
-else
-{
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Pacient (ID)</th>
-                <th>Lekár (ID)</th>
-                <th>Dátum</th>
-                <th>Typ</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var o in items)
-            {
-                <tr>
-                    <td>@o.ID_OPERACIE</td>
-                    <td>@o.ID_PACIENTA</td>
-                    <td>@o.ID_LEKARA</td>
-                    <td>@o.DATUM_OPERACIE</td>
-                    <td>@o.TYP_OPERACIE</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+
+<NisTable @key="_tableKey"
+          TItem="N_OPERACIum"
+          Title="Zoznam operácií"
+          SearchPlaceholder="Hľadať (ID, pacient, lekár, typ, popis)..."
+          PageSize="50"
+          Colspan="7"
+          Query="Query"
+          Filter="Filter"
+          Sort="Sort"
+          DefaultSortCol="@nameof(N_OPERACIum.DATUM_OPERACIE)"
+          DefaultSortAsc="false">
+
+    <Header Context="h">
+    <th><button class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(N_OPERACIum.ID_OPERACIE))">ID @h.Icon(nameof(N_OPERACIum.ID_OPERACIE))</button></th>
+    <th><button class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(N_OPERACIum.ID_PACIENTA))">Pacient @h.Icon(nameof(N_OPERACIum.ID_PACIENTA))</button></th>
+    <th><button class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(N_OPERACIum.ID_LEKARA))">Lekár @h.Icon(nameof(N_OPERACIum.ID_LEKARA))</button></th>
+    <th><button class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(N_OPERACIum.DATUM_OPERACIE))">Dátum @h.Icon(nameof(N_OPERACIum.DATUM_OPERACIE))</button></th>
+    <th><button class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(N_OPERACIum.TYP_OPERACIE))">Typ @h.Icon(nameof(N_OPERACIum.TYP_OPERACIE))</button></th>
+    <th>Popis</th>
+    <th>Akcie</th>
+    </Header>
+
+    <Row Context="o">
+        <tr>
+            <td>@o.ID_OPERACIE</td>
+            <td>@o.ID_PACIENTA</td>
+            <td>@o.ID_LEKARA</td>
+            <td>
+                @o.DATUM_OPERACIE.ToString("dd.MM.yyyy HH:mm")
+            </td>
+            <td>@o.TYP_OPERACIE</td>
+            <td class="nis-muted">@o.POPIS</td>
+            <td>
+                <button class="btn btn-sm nis-btn btn-nis-outline" @onclick="() => EditOp(o.ID_OPERACIE)">Edit</button>
+                <button class="btn btn-sm nis-btn btn-nis-danger" @onclick="() => DeleteOp(o.ID_OPERACIE)">Delete</button>
+            </td>
+        </tr>
+    </Row>
+</NisTable>
 
 @code {
-    private List<N_OPERACIum>? items;
+    private int _tableKey;
+    private bool _formOpen;
+    private bool _isNew;
+    private bool _busy;
 
-    protected override async Task OnInitializedAsync()
+    private OpEdit _edit = new();
+
+    private sealed class OpEdit
     {
-        items = await Db.N_OPERACIAs.AsNoTracking().ToListAsync();
+        public decimal IdOperacie { get; set; }
+
+        [Required] public decimal IdPacienta { get; set; }
+        [Required] public decimal IdLekara { get; set; }
+
+        [Required]
+        public DateTime Datum { get; set; } = DateTime.Now;
+
+        public string? Typ { get; set; }
+        public string? Popis { get; set; }
     }
+
+    private IQueryable<N_OPERACIum> Query(NisDbContext db)
+        => db.N_OPERACIAs.AsNoTracking();
+
+    private IQueryable<N_OPERACIum> Filter(IQueryable<N_OPERACIum> q, string t)
+    {
+        if (string.IsNullOrWhiteSpace(t)) return q;
+        t = t.Trim().ToUpper();
+
+        return q.Where(x =>
+            EF.Functions.Like(x.ID_OPERACIE.ToString(), $"%{t}%") ||
+            EF.Functions.Like(x.ID_PACIENTA.ToString(), $"%{t}%") ||
+            EF.Functions.Like(x.ID_LEKARA.ToString(), $"%{t}%") ||
+            EF.Functions.Like((x.TYP_OPERACIE ?? "").ToUpper(), $"%{t}%") ||
+            EF.Functions.Like((x.POPIS ?? "").ToUpper(), $"%{t}%"));
+    }
+
+    private IQueryable<N_OPERACIum> Sort(IQueryable<N_OPERACIum> q, string c, bool a)
+    {
+        return (c, a) switch
+        {
+            (nameof(N_OPERACIum.ID_OPERACIE), true) =>
+                q.OrderBy(x => x.ID_OPERACIE),
+
+            (nameof(N_OPERACIum.ID_OPERACIE), false) =>
+                q.OrderByDescending(x => x.ID_OPERACIE),
+
+            (nameof(N_OPERACIum.DATUM_OPERACIE), true) =>
+                q.OrderBy(x => x.DATUM_OPERACIE),
+
+            (nameof(N_OPERACIum.DATUM_OPERACIE), false) =>
+                q.OrderByDescending(x => x.DATUM_OPERACIE),
+
+            _ =>
+                q.OrderByDescending(x => x.ID_OPERACIE)
+        };
+    }
+
+    private void NewOp()
+    {
+        _edit = new OpEdit();
+        _isNew = true;
+        _formOpen = true;
+    }
+
+    private async Task EditOp(decimal id)
+    {
+        _busy = true;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var o = await db.N_OPERACIAs.FirstAsync(x => x.ID_OPERACIE == id);
+
+        _edit = new OpEdit
+        {
+            IdOperacie = o.ID_OPERACIE,
+            IdPacienta = o.ID_PACIENTA,
+            IdLekara = o.ID_LEKARA,
+            Datum = o.DATUM_OPERACIE,
+            Typ = o.TYP_OPERACIE,
+            Popis = o.POPIS
+        };
+
+        _isNew = false;
+        _formOpen = true;
+        _busy = false;
+    }
+
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            if (_isNew)
+            {
+                db.N_OPERACIAs.Add(new N_OPERACIum
+                {
+                    ID_PACIENTA = _edit.IdPacienta,
+                    ID_LEKARA = _edit.IdLekara,
+                    DATUM_OPERACIE = _edit.Datum,
+                    TYP_OPERACIE = _edit.Typ,
+                    POPIS = _edit.Popis
+                });
+            }
+            else
+            {
+                var o = await db.N_OPERACIAs.FirstAsync(x => x.ID_OPERACIE == _edit.IdOperacie);
+                o.ID_PACIENTA = _edit.IdPacienta;
+                o.ID_LEKARA = _edit.IdLekara;
+                o.DATUM_OPERACIE = _edit.Datum;
+                o.TYP_OPERACIE = _edit.Typ;
+                o.POPIS = _edit.Popis;
+            }
+
+            await db.SaveChangesAsync();
+
+            Notify.Success("Uložené");
+            _formOpen = false;
+            _tableKey++;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Oracle.ManagedDataAccess.Client.OracleException oex && oex.Number == 1)
+        {
+            // ORA-00001
+            Notify.Error("Nepodarilo sa uložiť: konflikt unikátneho kľúča (pravdepodobne ID/sekvencia).");
+        }
+        catch (Exception ex)
+        {
+            Notify.Error("Chyba: " + ex.Message);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DeleteOp(decimal id)
+    {
+        _busy = true;
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var o = await db.N_OPERACIAs.FirstAsync(x => x.ID_OPERACIE == id);
+        db.N_OPERACIAs.Remove(o);
+        await db.SaveChangesAsync();
+
+        Notify.Success("Zmazané");
+        _tableKey++;
+        _busy = false;
+    }
+
+    private void CloseForm() => _formOpen = false;
 }

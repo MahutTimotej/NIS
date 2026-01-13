@@ -1,40 +1,530 @@
 ﻿@page "/pacienti"
-@inject NisDbContext Db
+@rendermode InteractiveServer
 
-<h3>Pacienti</h3>
+@using Microsoft.EntityFrameworkCore
+@using NIS.Data
+@using NIS.Data.Models
+@using NIS.Services
+@using System.ComponentModel.DataAnnotations
 
-@if (items is null)
+@inject IDbContextFactory<NisDbContext> DbFactory
+@inject NotificationService Notify
+
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+    <div>
+        <h2 class="mb-0">Pacienti</h2>
+        <div class="nis-muted small">CRUD + vyhľadávanie a zoradenie podľa stĺpcov.</div>
+    </div>
+
+    <button type="button" class="btn nis-btn btn-nis-primary" @onclick="NewPatient" disabled="@_busy">
+        <span class="bi bi-plus-lg me-2"></span>
+        Nový pacient
+    </button>
+</div>
+
+@if (_formOpen)
 {
-    <p>Načítavam...</p>
+    <div class="card-nis mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div>
+                <span class="bi bi-person-plus-fill me-2"></span>
+                @(_isNew ? "Nový pacient" : $"Edit pacienta (ID: {_edit.IdPacienta})")
+            </div>
+
+            <button type="button" class="btn btn-sm nis-btn btn-nis-outline" @onclick="CloseForm" disabled="@_busy">
+                <span class="bi bi-x-lg me-1"></span> Zavrieť
+            </button>
+        </div>
+
+        <div class="card-body">
+            <EditForm Model="_edit" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Rodné číslo</label>
+                        <InputText class="form-control" @bind-Value="_edit.RodneCislo" disabled="@(!_isNew || _busy)" />
+                        @if (!_isNew)
+                        {
+                            <div class="nis-muted small mt-1">Pri editácii je vypnuté.</div>
+                        }
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Meno</label>
+                        <InputText class="form-control" @bind-Value="_edit.Meno" disabled="@_busy" />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Priezvisko</label>
+                        <InputText class="form-control" @bind-Value="_edit.Priezvisko" disabled="@_busy" />
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold">PSČ</label>
+                        <InputText class="form-control" @bind-Value="_edit.Psc" disabled="@_busy" />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Ulica</label>
+                        <InputText class="form-control" @bind-Value="_edit.Ulica" disabled="@_busy" />
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold">Poisťovňa</label>
+                        <InputSelect class="form-select" @bind-Value="_edit.Poistovna" disabled="@_busy">
+                            <option value="">(nezadané)</option>
+                            <option value="VSZP">VŠZP</option>
+                            <option value="DOVERA">Dôvera</option>
+                            <option value="UNION">Union</option>
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn nis-btn btn-nis-primary" disabled="@_busy">
+                        <span class="bi bi-save me-2"></span> Uložiť
+                    </button>
+
+                    <button type="button" class="btn nis-btn btn-nis-outline" @onclick="CloseForm" disabled="@_busy">
+                        Zrušiť
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
 }
-else
-{
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Rodné číslo</th>
-                <th>Poistovňa</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in items)
-            {
-                <tr>
-                    <td>@p.ID_PACIENTA</td>
-                    <td>@p.RODNE_CISLO</td>
-                    <td>@p.POISTOVNA</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+
+<NisTable @key="_tableKey"
+          TItem="PacientRow"
+          Title="Zoznam pacientov"
+          Subtitle="@($"{_total} záznamov dokopy")"
+          SearchPlaceholder="Hľadať (ID, rodné číslo, meno, priezvisko, PSČ, ulica, poisťovňa)..."
+          PageSize="50"
+          Colspan="8"
+          Query="PacientiQuery"
+          Filter="FilterPacienti"
+          Sort="SortPacienti"
+          DefaultSortCol="@nameof(PacientRow.IdPacienta)"
+          DefaultSortAsc="true">
+
+    <Header Context="h">
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.IdPacienta))">
+            ID @h.Icon(nameof(PacientRow.IdPacienta))
+        </button>
+    </th>
+
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.RodneCislo))">
+            Rodné číslo @h.Icon(nameof(PacientRow.RodneCislo))
+        </button>
+    </th>
+
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.Meno))">
+            Meno @h.Icon(nameof(PacientRow.Meno))
+        </button>
+    </th>
+
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.Priezvisko))">
+            Priezvisko @h.Icon(nameof(PacientRow.Priezvisko))
+        </button>
+    </th>
+
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.Psc))">
+            PSČ @h.Icon(nameof(PacientRow.Psc))
+        </button>
+    </th>
+
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.Ulica))">
+            Ulica @h.Icon(nameof(PacientRow.Ulica))
+        </button>
+    </th>
+
+    <th class="nis-th">
+        <button type="button" class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(PacientRow.Poistovna))">
+            Poisťovňa @h.Icon(nameof(PacientRow.Poistovna))
+        </button>
+    </th>
+
+    <th style="width: 200px;">Akcie</th>
+    </Header>
+
+    <Row Context="p">
+        <tr>
+            <td class="fw-semibold">@p.IdPacienta</td>
+            <td>@p.RodneCislo</td>
+            <td>@p.Meno</td>
+            <td>@p.Priezvisko</td>
+            <td>@p.Psc</td>
+            <td>@p.Ulica</td>
+            <td>@DisplayPoistovna(p.Poistovna)</td>
+            <td>
+                @if (_deleteId == p.IdPacienta)
+                {
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm nis-btn btn-nis-danger"
+                                disabled="@_busy"
+                                @onclick="() => ConfirmDeleteAsync(p.IdPacienta)">
+                            Zmazať
+                        </button>
+                        <button type="button" class="btn btn-sm nis-btn btn-nis-outline"
+                                disabled="@_busy"
+                                @onclick="CancelDelete">
+                            Zrušiť
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm nis-btn btn-nis-outline"
+                                disabled="@_busy"
+                                title="Edit"
+                                @onclick="() => EditPatientAsync(p.IdPacienta)">
+                            <span class="bi bi-pencil-square me-1"></span> Edit
+                        </button>
+                        <button type="button" class="btn btn-sm nis-btn btn-nis-outline"
+                                disabled="@_busy"
+                                title="Delete"
+                                @onclick="() => AskDelete(p.IdPacienta)">
+                            <span class="bi bi-trash me-1"></span> Delete
+                        </button>
+                    </div>
+                }
+            </td>
+        </tr>
+    </Row>
+
+</NisTable>
 
 @code {
-    private List<N_PACIENT>? items;
+    private int _tableKey = 0;
+    private int _total;
+    private bool _formOpen;
+    private bool _isNew;
+    private bool _busy;
+    private PacientEditModel _edit = new();
+    private decimal? _deleteId;
+
+    private sealed class PacientRow
+    {
+        public decimal IdPacienta { get; set; }
+        public string RodneCislo { get; set; } = "";
+        public string? Meno { get; set; }
+        public string? Priezvisko { get; set; }
+        public string? Psc { get; set; }
+        public string? Ulica { get; set; }
+        public string? Poistovna { get; set; }
+    }
+
+    private sealed class PacientEditModel
+    {
+        public decimal IdPacienta { get; set; }
+
+        [Required(ErrorMessage = "Rodné číslo je povinné.")]
+        public string RodneCislo { get; set; } = "";
+
+        [Required(ErrorMessage = "Meno je povinné.")]
+        public string Meno { get; set; } = "";
+
+        [Required(ErrorMessage = "Priezvisko je povinné.")]
+        public string Priezvisko { get; set; } = "";
+
+        [Required(ErrorMessage = "PSČ je povinné.")]
+        public string Psc { get; set; } = "";
+
+        public string? Ulica { get; set; }
+        public string? Poistovna { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        items = await Db.N_PACIENTs.AsNoTracking().ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _total = await db.N_PACIENTs.CountAsync();
     }
+
+    private IQueryable<PacientRow> PacientiQuery(NisDbContext db)
+        => db.N_PACIENTs.AsNoTracking()
+            .Select(p => new PacientRow
+            {
+                IdPacienta = p.ID_PACIENTA,
+                RodneCislo = p.RODNE_CISLO.Trim(),
+                Poistovna = p.POISTOVNA,
+                Meno = p.RODNE_CISLONavigation != null ? p.RODNE_CISLONavigation.MENO : null,
+                Priezvisko = p.RODNE_CISLONavigation != null ? p.RODNE_CISLONavigation.PRIEZVISKO : null,
+                Psc = p.RODNE_CISLONavigation != null ? p.RODNE_CISLONavigation.PSC : null,
+                Ulica = p.RODNE_CISLONavigation != null ? p.RODNE_CISLONavigation.ULICA : null
+            });
+
+    private IQueryable<PacientRow> FilterPacienti(IQueryable<PacientRow> q, string term)
+    {
+        var t = (term ?? "").Trim();
+        if (t.Length == 0) return q;
+
+        var up = t.ToUpper();
+        var like = $"%{up}%";
+        var likeRaw = $"%{t}%";
+
+        return q.Where(x =>
+            EF.Functions.Like(x.IdPacienta.ToString(), likeRaw) ||
+            EF.Functions.Like((x.RodneCislo ?? "").Trim().ToUpper(), like) ||
+            EF.Functions.Like((x.Meno ?? "").ToUpper(), like) ||
+            EF.Functions.Like((x.Priezvisko ?? "").ToUpper(), like) ||
+            EF.Functions.Like((x.Psc ?? "").ToUpper(), like) ||
+            EF.Functions.Like((x.Ulica ?? "").ToUpper(), like) ||
+            EF.Functions.Like((x.Poistovna ?? "").ToUpper(), like)
+        );
+    }
+
+    private IQueryable<PacientRow> SortPacienti(IQueryable<PacientRow> q, string col, bool asc)
+        => (col, asc) switch
+        {
+            (nameof(PacientRow.IdPacienta), true) => q.OrderBy(x => x.IdPacienta),
+            (nameof(PacientRow.IdPacienta), false) => q.OrderByDescending(x => x.IdPacienta),
+
+            (nameof(PacientRow.RodneCislo), true) => q.OrderBy(x => x.RodneCislo),
+            (nameof(PacientRow.RodneCislo), false) => q.OrderByDescending(x => x.RodneCislo),
+
+            (nameof(PacientRow.Meno), true) => q.OrderBy(x => x.Meno),
+            (nameof(PacientRow.Meno), false) => q.OrderByDescending(x => x.Meno),
+
+            (nameof(PacientRow.Priezvisko), true) => q.OrderBy(x => x.Priezvisko),
+            (nameof(PacientRow.Priezvisko), false) => q.OrderByDescending(x => x.Priezvisko),
+
+            (nameof(PacientRow.Psc), true) => q.OrderBy(x => x.Psc),
+            (nameof(PacientRow.Psc), false) => q.OrderByDescending(x => x.Psc),
+
+            (nameof(PacientRow.Ulica), true) => q.OrderBy(x => x.Ulica),
+            (nameof(PacientRow.Ulica), false) => q.OrderByDescending(x => x.Ulica),
+
+            (nameof(PacientRow.Poistovna), true) => q.OrderBy(x => x.Poistovna),
+            (nameof(PacientRow.Poistovna), false) => q.OrderByDescending(x => x.Poistovna),
+
+            _ => q.OrderBy(x => x.IdPacienta)
+        };
+
+    private void NewPatient()
+    {
+        _isNew = true;
+        _formOpen = true;
+        _edit = new PacientEditModel();
+    }
+
+    private void CloseForm()
+    {
+        _formOpen = false;
+    }
+
+    private async Task EditPatientAsync(decimal id)
+    {
+        try
+        {
+            _busy = true;
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var p = await db.N_PACIENTs.AsNoTracking()
+                .Include(x => x.RODNE_CISLONavigation)
+                .FirstOrDefaultAsync(x => x.ID_PACIENTA == id);
+
+            if (p is null)
+            {
+                Notify.Error("Pacient sa nenašiel.");
+                return;
+            }
+
+            var o = p.RODNE_CISLONavigation;
+
+            _edit = new PacientEditModel
+            {
+                IdPacienta = p.ID_PACIENTA,
+                RodneCislo = p.RODNE_CISLO,
+                Poistovna = p.POISTOVNA,
+                Meno = o?.MENO ?? "",
+                Priezvisko = o?.PRIEZVISKO ?? "",
+                Psc = o?.PSC ?? "",
+                Ulica = o?.ULICA
+            };
+
+            _isNew = false;
+            _formOpen = true;
+        }
+        catch
+        {
+            Notify.Error("Chyba pri načítaní pacienta.");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+
+        try
+        {
+            var rc = (_edit.RodneCislo ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(rc))
+            {
+                Notify.Warning("Rodné číslo je povinné.");
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // 1) UPSERT osobné údaje
+            var osoba = await db.N_OSOBNE_UDAJEs
+                .AsTracking()
+                .FirstOrDefaultAsync(x => x.RODNE_CISLO.Trim() == rc);
+
+            if (osoba is null)
+            {
+                osoba = new N_OSOBNE_UDAJE
+                {
+                    RODNE_CISLO = rc
+                };
+                db.N_OSOBNE_UDAJEs.Add(osoba);
+            }
+
+            osoba.MENO = _edit.Meno.Trim();
+            osoba.PRIEZVISKO = _edit.Priezvisko.Trim();
+            osoba.PSC = _edit.Psc.Trim();
+            osoba.ULICA = string.IsNullOrWhiteSpace(_edit.Ulica) ? null : _edit.Ulica.Trim();
+
+            // 2) CREATE vs UPDATE pacienta
+            if (_isNew)
+            {
+                // FIX: Oracle provider chokes on AnyAsync -> generates THEN True ELSE False
+                var pacientExists = await db.N_PACIENTs
+                    .CountAsync(x => x.RODNE_CISLO.Trim() == rc) > 0;
+
+                if (pacientExists)
+                {
+                    Notify.Warning("Pacient s týmto rodným číslom už existuje.");
+                    return;
+                }
+
+                db.N_PACIENTs.Add(new N_PACIENT
+                {
+                    RODNE_CISLO = rc,
+                    POISTOVNA = string.IsNullOrWhiteSpace(_edit.Poistovna) ? null : _edit.Poistovna.Trim()
+                });
+
+                await db.SaveChangesAsync();
+                Notify.Success("Pacient bol úspešne vytvorený.");
+            }
+            else
+            {
+                var pacient = await db.N_PACIENTs
+                    .FirstOrDefaultAsync(x => x.ID_PACIENTA == _edit.IdPacienta);
+
+                if (pacient is null)
+                {
+                    Notify.Error("Pacient sa nenašiel (edit).");
+                    return;
+                }
+
+                pacient.POISTOVNA = string.IsNullOrWhiteSpace(_edit.Poistovna) ? null : _edit.Poistovna.Trim();
+
+                await db.SaveChangesAsync();
+                Notify.Success("Pacient bol úspešne upravený.");
+            }
+
+            _formOpen = false;
+            _tableKey++;
+            _total = await db.N_PACIENTs.CountAsync();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (DbUpdateException ex)
+        {
+            Notify.Error("Databázová chyba: " + (ex.InnerException?.Message ?? ex.Message));
+        }
+        catch (Exception ex)
+        {
+            Notify.Error("Chyba: " + ex.Message);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void AskDelete(decimal id)
+    {
+        _deleteId = id;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CancelDelete()
+    {
+        _deleteId = null;
+        InvokeAsync(StateHasChanged);
+    }
+
+
+    private async Task ConfirmDeleteAsync(decimal id)
+    {
+        _busy = true;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var pacient = await db.N_PACIENTs
+                .FirstOrDefaultAsync(x => x.ID_PACIENTA == id);
+
+            if (pacient is null)
+            {
+                Notify.Warning("Pacient neexistuje.");
+                return;
+            }
+
+            var vysetreniaCount = await db.N_VYSETRENIEs.CountAsync(x => x.ID_PACIENTA == id);
+            var prijmyCount = await db.N_PRIJEMs.CountAsync(x => x.ID_PACIENTA == id);
+
+            if (vysetreniaCount > 0 || prijmyCount > 0)
+            {
+                Notify.Warning("Pacienta nie je možné zmazať – má väzby.");
+                return;
+            }
+
+            db.N_PACIENTs.Remove(pacient);
+            await db.SaveChangesAsync();
+
+            Notify.Success("Pacient bol zmazaný.");
+
+            _deleteId = null;
+            _tableKey++;
+            _total--;
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Notify.Error("Chyba pri mazaní: " + ex.Message);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string DisplayPoistovna(string? p)
+        => p switch
+        {
+            "VSZP" => "VŠZP",
+            "DOVERA" => "Dôvera",
+            "UNION" => "Union",
+            null or "" => "",
+            _ => p
+        };
 }

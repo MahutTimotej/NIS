@@ -1,44 +1,269 @@
 ﻿@page "/predpisy"
-@inject NisDbContext Db
+@rendermode InteractiveServer
 
-<h3>Predpisy</h3>
+@using Microsoft.EntityFrameworkCore
+@using NIS.Data
+@using NIS.Data.Models
 
-@if (items is null)
-{
-    <p>Načítavam...</p>
-}
-else
-{
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Vyšetrenie (ID)</th>
-                <th>SUKL kód</th>
-                <th>Dátum</th>
-                <th>Dávkovanie</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in items)
-            {
-                <tr>
-                    <td>@p.ID_PREDPISU</td>
-                    <td>@p.ID_VYSETRENIA</td>
-                    <td>@p.SUKL_KOD</td>
-                    <td>@p.DATUM_PREDPISU</td>
-                    <td>@p.DAVKOVANIE</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+@inject IDbContextFactory<NisDbContext> DbFactory
+
+<h2 class="mb-3">Predpisy</h2>
+
+<div class="card-nis mb-3">
+    <div class="card-header fw-semibold">
+        @(_isEdit ? "Úprava predpisu" : "Nový predpis")
+    </div>
+
+    <div class="card-body">
+        <EditForm Model="_edit" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <div class="row g-3">
+
+                <div class="col-md-2">
+                    <InputNumber class="form-control"
+                                 placeholder="ID vyšetrenia"
+                                 @bind-Value="_edit.IdVysetrenia" />
+                </div>
+
+                <div class="col-md-3">
+                    <InputText class="form-control"
+                               placeholder="SUKL kód (napr. 00405)"
+                               @bind-Value="_edit.SuklKod" />
+                </div>
+
+                <div class="col-md-2">
+                    <InputText class="form-control"
+                               placeholder="Dávkovanie"
+                               @bind-Value="_edit.Davkovanie" />
+                </div>
+
+                <div class="col-md-2">
+                    <InputText class="form-control"
+                               placeholder="Množstvo"
+                               @bind-Value="_edit.Mnozstvo" />
+                </div>
+
+                <div class="col-md-3">
+                    <InputDate class="form-control"
+                               @bind-Value="_edit.Datum" />
+                </div>
+
+                <div class="col-md-12">
+                    <InputText class="form-control"
+                               placeholder="Poznámka"
+                               @bind-Value="_edit.Poznamka" />
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn nis-btn btn-nis-primary" type="submit">
+                    Uložiť
+                </button>
+
+                @if (_isEdit)
+                {
+                    <button class="btn nis-btn btn-nis-outline"
+                            type="button"
+                            @onclick="CancelEdit">
+                        Zrušiť
+                    </button>
+                }
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<NisTable @key="_tableKey"
+          TItem="PredpisRow"
+          Title="Zoznam predpisov"
+          SearchPlaceholder="Hľadať (ID, vyšetrenie, SUKL, liek, dávkovanie)..."
+          PageSize="50"
+          Colspan="8"
+          Query="Query"
+          Filter="Filter"
+          Sort="Sort"
+          DefaultSortCol="@nameof(PredpisRow.Datum)"
+          DefaultSortAsc="false">
+
+    <Header Context="h">
+    <th>ID</th>
+    <th>Vyšetrenie</th>
+    <th>SUKL</th>
+    <th>Liek</th>
+    <th>Dátum</th>
+    <th>Dávkovanie</th>
+    <th>Množstvo</th>
+    <th>Akcie</th>
+    </Header>
+
+    <Row Context="p">
+        <tr>
+            <td>@p.Id</td>
+            <td>@p.IdVysetrenia</td>
+            <td>@p.SuklKod</td>
+            <td>@p.Liek</td>
+            <td>@p.Datum.ToString("dd.MM.yyyy")</td>
+            <td>@p.Davkovanie</td>
+            <td>@p.Mnozstvo</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1"
+                        @onclick="() => EditAsync(p.Id)">
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger"
+                        @onclick="() => DeleteAsync(p.Id)">
+                    X
+                </button>
+            </td>
+        </tr>
+    </Row>
+
+</NisTable>
 
 @code {
-    private List<N_PREDPI>? items;
+
+    private int _tableKey = 0;
+    private bool _isEdit = false;
+
+    private List<N_LIEK> _lieky = new();
+
+    private PredpisEdit _edit = new()
+    {
+        Datum = DateTime.Today
+    };
+
+    private sealed class PredpisEdit
+    {
+        public decimal Id { get; set; }
+
+        public decimal IdVysetrenia { get; set; }
+
+        public string SuklKod { get; set; } = "";
+
+        public string? Davkovanie { get; set; }
+        public string? Mnozstvo { get; set; }
+        public string? Poznamka { get; set; }
+
+        public DateTime Datum { get; set; }
+    }
+
+
+    private sealed class PredpisRow
+    {
+        public decimal Id { get; set; }
+        public decimal IdVysetrenia { get; set; }
+        public string? SuklKod { get; set; }
+        public string? Liek { get; set; }
+        public DateTime Datum { get; set; }
+        public string? Davkovanie { get; set; }
+        public string? Mnozstvo { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        items = await Db.N_PREDPIs.AsNoTracking().ToListAsync();
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _lieky = await db.N_LIEKs.AsNoTracking().OrderBy(x => x.NAZOV).ToListAsync();
+    }
+
+    IQueryable<PredpisRow> Query(NisDbContext db)
+        => db.N_PREDPIs.AsNoTracking()
+            .Select(p => new PredpisRow
+            {
+                Id = p.ID_PREDPISU,
+                IdVysetrenia = p.ID_VYSETRENIA,
+                SuklKod = p.SUKL_KOD,
+                Liek = p.SUKL_KODNavigation.NAZOV,
+                Datum = p.DATUM_PREDPISU,
+                Davkovanie = p.DAVKOVANIE,
+                Mnozstvo = p.MNOZSTVO
+            });
+
+    IQueryable<PredpisRow> Filter(IQueryable<PredpisRow> q, string t)
+    {
+        var s = t.ToUpper();
+        return q.Where(x =>
+            EF.Functions.Like(x.Id.ToString(), $"%{t}%") ||
+            EF.Functions.Like(x.IdVysetrenia.ToString(), $"%{t}%") ||
+            EF.Functions.Like((x.SuklKod ?? "").ToUpper(), $"%{s}%") ||
+            EF.Functions.Like((x.Liek ?? "").ToUpper(), $"%{s}%") ||
+            EF.Functions.Like((x.Davkovanie ?? "").ToUpper(), $"%{s}%")
+        );
+    }
+
+    IQueryable<PredpisRow> Sort(IQueryable<PredpisRow> q, string c, bool a)
+        => q.OrderByDescending(x => x.Datum);
+
+    private async Task SaveAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        if (_isEdit)
+        {
+            var p = await db.N_PREDPIs.FindAsync(_edit.Id);
+            if (p == null) return;
+
+            p.ID_VYSETRENIA = _edit.IdVysetrenia;
+            p.SUKL_KOD = _edit.SuklKod;
+            p.DAVKOVANIE = _edit.Davkovanie;
+            p.MNOZSTVO = _edit.Mnozstvo;
+            p.POZNAMKA = _edit.Poznamka;
+            p.DATUM_PREDPISU = _edit.Datum;
+        }
+        else
+        {
+            db.N_PREDPIs.Add(new N_PREDPI
+            {
+                ID_VYSETRENIA = _edit.IdVysetrenia,
+                SUKL_KOD = _edit.SuklKod!,
+                DAVKOVANIE = _edit.Davkovanie,
+                MNOZSTVO = _edit.Mnozstvo,
+                POZNAMKA = _edit.Poznamka,
+                DATUM_PREDPISU = _edit.Datum
+            });
+        }
+
+        await db.SaveChangesAsync();
+
+        CancelEdit();
+        _tableKey++;
+    }
+
+    private async Task EditAsync(decimal id)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var p = await db.N_PREDPIs.FindAsync(id);
+        if (p == null) return;
+
+        _edit = new PredpisEdit
+        {
+            Id = p.ID_PREDPISU,
+            IdVysetrenia = p.ID_VYSETRENIA,
+            SuklKod = p.SUKL_KOD,
+            Davkovanie = p.DAVKOVANIE,
+            Mnozstvo = p.MNOZSTVO,
+            Poznamka = p.POZNAMKA,
+            Datum = p.DATUM_PREDPISU
+        };
+
+        _isEdit = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEdit = false;
+        _edit = new PredpisEdit { Datum = DateTime.Today };
+    }
+
+    private async Task DeleteAsync(decimal id)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var p = await db.N_PREDPIs.FindAsync(id);
+        if (p == null) return;
+
+        db.N_PREDPIs.Remove(p);
+        await db.SaveChangesAsync();
+
+        _tableKey++;
     }
 }

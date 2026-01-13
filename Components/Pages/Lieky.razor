@@ -1,42 +1,247 @@
 ﻿@page "/lieky"
+@* Ak používaš .NET 8 Blazor Web App (Interactive), nechaj. Inak zmaž. *@
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
 @inject NisDbContext Db
 
-<h3>Lieky</h3>
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+    <div>
+        <h2 class="mb-1">Lieky</h2>
+        <div class="nis-muted">Vyhľadávanie a zoradenie podľa stĺpcov. Stránkovanie max 50 záznamov.</div>
+        <div class="nis-muted small mt-1"><strong>@_totalAll</strong> záznamov dokopy</div>
+    </div>
 
-@if (items is null)
+    <div class="d-flex align-items-center gap-2">
+        <input class="form-control"
+               style="min-width: 280px;"
+               placeholder="Hľadať (SUKL, názov, ATC, výdaj, reg. číslo)..."
+               value="@_q"
+               @oninput="OnSearchInput" />
+
+        <span class="nis-tag">@_totalFiltered</span>
+    </div>
+</div>
+
+@if (_loading)
 {
     <p>Načítavam...</p>
 }
 else
 {
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>SUKL kód</th>
-                <th>Názov</th>
-                <th>ATC kód</th>
-                <th>Výdaj</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var l in items)
-            {
-                <tr>
-                    <td>@l.SUKL_KOD</td>
-                    <td>@l.NAZOV</td>
-                    <td>@l.ATC_KOD</td>
-                    <td>@l.VYDAJ</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="card-nis">
+        <div class="card-body">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th class="nis-th">
+                            <button type="button" class="btn btn-link nis-th-btn" @onclick="() => SetSort(nameof(N_LIEK.SUKL_KOD))">
+                                SUKL kód @SortIcon(nameof(N_LIEK.SUKL_KOD))
+                            </button>
+                        </th>
+                        <th class="nis-th">
+                            <button type="button" class="btn btn-link nis-th-btn" @onclick="() => SetSort(nameof(N_LIEK.NAZOV))">
+                                Názov @SortIcon(nameof(N_LIEK.NAZOV))
+                            </button>
+                        </th>
+                        <th class="nis-th">
+                            <button type="button" class="btn btn-link nis-th-btn" @onclick="() => SetSort(nameof(N_LIEK.ATC_KOD))">
+                                ATC kód @SortIcon(nameof(N_LIEK.ATC_KOD))
+                            </button>
+                        </th>
+                        <th class="nis-th">
+                            <button type="button" class="btn btn-link nis-th-btn" @onclick="() => SetSort(nameof(N_LIEK.ATC_NAZOV_SK))">
+                                ATC názov (SK) @SortIcon(nameof(N_LIEK.ATC_NAZOV_SK))
+                            </button>
+                        </th>
+                        <th class="nis-th">
+                            <button type="button" class="btn btn-link nis-th-btn" @onclick="() => SetSort(nameof(N_LIEK.VYDAJ))">
+                                Výdaj @SortIcon(nameof(N_LIEK.VYDAJ))
+                            </button>
+                        </th>
+                        <th class="nis-th">
+                            <button type="button" class="btn btn-link nis-th-btn" @onclick="() => SetSort(nameof(N_LIEK.PLATNOST))">
+                                Platnosť @SortIcon(nameof(N_LIEK.PLATNOST))
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (_items.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="nis-muted">Žiadne záznamy pre daný filter.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var l in _items)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@l.SUKL_KOD</td>
+                                <td>@l.NAZOV</td>
+                                <td>@l.ATC_KOD</td>
+                                <td class="nis-muted">@l.ATC_NAZOV_SK</td>
+                                <td>@l.VYDAJ</td>
+                                <td>@l.PLATNOST</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+                <div class="nis-muted small">
+                    Zobrazené: <strong>@_items.Count</strong> z <strong>@_totalFiltered</strong>.
+                    Strana <strong>@_page</strong> / <strong>@_maxPage</strong>. Max 50 na stranu
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm nis-btn btn-nis-outline" @onclick="Prev" disabled="@(_page <= 1)">Prev</button>
+                    <button class="btn btn-sm nis-btn btn-nis-outline" @onclick="Next" disabled="@(_page >= _maxPage)">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
-    private List<N_LIEK>? items;
+    private const int PageSize = 50;
+
+    private List<N_LIEK> _items = new();
+
+    private string _q = "";
+    private string _sortCol = nameof(N_LIEK.NAZOV);
+    private bool _sortAsc = true;
+
+    private int _page = 1;
+    private int _maxPage = 1;
+
+    private int _totalAll;
+    private int _totalFiltered;
+
+    private bool _loading;
+
+    private CancellationTokenSource? _searchCts;
 
     protected override async Task OnInitializedAsync()
     {
-        items = await Db.N_LIEKs.AsNoTracking().ToListAsync();
+        _totalAll = await Db.N_LIEKs.CountAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        IQueryable<N_LIEK> q = Db.N_LIEKs.AsNoTracking();
+
+        // filter
+        var term = (_q ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            var up = term.ToUpper();
+            var like = $"%{up}%";
+
+            q = q.Where(l =>
+                EF.Functions.Like((l.SUKL_KOD ?? "").ToUpper(), like) ||
+                EF.Functions.Like((l.NAZOV ?? "").ToUpper(), like) ||
+                (l.ATC_KOD != null && EF.Functions.Like(l.ATC_KOD.ToUpper(), like)) ||
+                (l.ATC_NAZOV_SK != null && EF.Functions.Like(l.ATC_NAZOV_SK.ToUpper(), like)) ||
+                (l.VYDAJ != null && EF.Functions.Like(l.VYDAJ.ToUpper(), like)) ||
+                (l.REG_CISLO != null && EF.Functions.Like(l.REG_CISLO.ToUpper(), like))
+            );
+        }
+
+        _totalFiltered = await q.CountAsync();
+
+        // sort
+        q = (_sortCol, _sortAsc) switch
+        {
+            (nameof(N_LIEK.SUKL_KOD), true) => q.OrderBy(x => x.SUKL_KOD),
+            (nameof(N_LIEK.SUKL_KOD), false) => q.OrderByDescending(x => x.SUKL_KOD),
+
+            (nameof(N_LIEK.NAZOV), true) => q.OrderBy(x => x.NAZOV),
+            (nameof(N_LIEK.NAZOV), false) => q.OrderByDescending(x => x.NAZOV),
+
+            (nameof(N_LIEK.ATC_KOD), true) => q.OrderBy(x => x.ATC_KOD),
+            (nameof(N_LIEK.ATC_KOD), false) => q.OrderByDescending(x => x.ATC_KOD),
+
+            (nameof(N_LIEK.ATC_NAZOV_SK), true) => q.OrderBy(x => x.ATC_NAZOV_SK),
+            (nameof(N_LIEK.ATC_NAZOV_SK), false) => q.OrderByDescending(x => x.ATC_NAZOV_SK),
+
+            (nameof(N_LIEK.VYDAJ), true) => q.OrderBy(x => x.VYDAJ),
+            (nameof(N_LIEK.VYDAJ), false) => q.OrderByDescending(x => x.VYDAJ),
+
+            (nameof(N_LIEK.PLATNOST), true) => q.OrderBy(x => x.PLATNOST),
+            (nameof(N_LIEK.PLATNOST), false) => q.OrderByDescending(x => x.PLATNOST),
+
+            _ => q.OrderBy(x => x.NAZOV)
+        };
+
+        _maxPage = Math.Max(1, (int)Math.Ceiling(_totalFiltered / (double)PageSize));
+        if (_page > _maxPage) _page = _maxPage;
+
+        _items = await q
+            .Skip((_page - 1) * PageSize)
+            .Take(PageSize)
+            .ToListAsync();
+
+        _loading = false;
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _q = e.Value?.ToString() ?? "";
+        _page = 1;
+
+        // malý debounce aby to pri 30k nelietalo 50 dotazov za sekundu
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(180, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task SetSort(string col)
+    {
+        if (_sortCol == col) _sortAsc = !_sortAsc;
+        else
+        {
+            _sortCol = col;
+            _sortAsc = true;
+        }
+
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private MarkupString SortIcon(string col)
+    {
+        if (_sortCol != col) return (MarkupString)@"<span class=""bi bi-arrow-down-up nis-muted""></span>";
+        return _sortAsc
+            ? (MarkupString)@"<span class=""bi bi-sort-up""></span>"
+            : (MarkupString)@"<span class=""bi bi-sort-down""></span>";
+    }
+
+    private async Task Prev()
+    {
+        if (_page <= 1) return;
+        _page--;
+        await LoadAsync();
+    }
+
+    private async Task Next()
+    {
+        if (_page >= _maxPage) return;
+        _page++;
+        await LoadAsync();
     }
 }

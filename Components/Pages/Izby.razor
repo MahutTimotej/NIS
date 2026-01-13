@@ -1,42 +1,38 @@
 ﻿@page "/izby"
-@inject NisDbContext Db
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
 
-<h3>Izby</h3>
+<NisTable TItem="N_IZBA"
+          Title="Izby"
+          Subtitle="Zoznam izieb."
+          SearchPlaceholder="Hľadať (číslo, oddelenie)..."
+          PageSize="50"
+          Colspan="4"
+          Query="q"
+          Filter="f"
+          Sort="s">
 
-@if (items is null)
-{
-    <p>Načítavam...</p>
-}
-else
-{
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Číslo izby</th>
-                <th>Kapacita</th>
-                <th>Oddelenie (ID)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var i in items)
-            {
-                <tr>
-                    <td>@i.ID_IZBY</td>
-                    <td>@i.CISLO_IZBY</td>
-                    <td>@i.KAPACITA</td>
-                    <td>@i.ID_ODDELENIA</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    <Header Context="h">
+    <th>ID</th>
+    <th>Číslo</th>
+    <th>Kapacita</th>
+    <th>Oddelenie</th>
+    </Header>
+
+    <Row Context="i">
+        <tr>
+            <td>@i.ID_IZBY</td>
+            <td>@i.CISLO_IZBY</td>
+            <td>@i.KAPACITA</td>
+            <td>@i.ID_ODDELENIA</td>
+        </tr>
+    </Row>
+</NisTable>
 
 @code {
-    private List<N_IZBA>? items;
-
-    protected override async Task OnInitializedAsync()
-    {
-        items = await Db.N_IZBAs.AsNoTracking().ToListAsync();
-    }
+    IQueryable<N_IZBA> q(NisDbContext db) => db.N_IZBAs.AsNoTracking();
+    IQueryable<N_IZBA> f(IQueryable<N_IZBA> q, string t)
+        => q.Where(x => EF.Functions.Like(x.CISLO_IZBY.ToString(), $"%{t}%"));
+    IQueryable<N_IZBA> s(IQueryable<N_IZBA> q, string c, bool a)
+        => q.OrderBy(x => x.ID_IZBY);
 }

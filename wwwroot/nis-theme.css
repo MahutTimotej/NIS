@@ -1,3 +1,6 @@
+/* ===============================
+   ROOT + COLORS
+================================ */
 :root {
     --nis-bg: #dff1ff;
     --nis-card: rgba(255,255,255,.92);
@@ -7,63 +10,57 @@
     --nis-accent: #d32f2f;
     --nis-text: #0f172a;
     --nis-muted: rgba(15,23,42,.65);
-    /* bootstrap vars */
     --bs-body-bg: var(--nis-bg);
     --bs-body-color: var(--nis-text);
     --bs-primary: var(--nis-primary);
     --bs-danger: var(--nis-accent);
     --bs-link-color: var(--nis-primary);
+    --nis-topbar-h: 76px;
+    --nis-footerbar-h: 56px;
 }
 
-/* FIX: Blazor template niekedy d·va biele pozadia */
-html, body, .page, main, .content, .main {
+/* ===============================
+   GLOBAL BACKGROUND
+================================ */
+html, body, main, .content {
     background: var(--nis-bg) !important;
-}
-
-html, body {
     height: 100%;
 }
 
 body {
-    padding-bottom: 64px;
     color: var(--nis-text);
+    padding-bottom: 0 !important;
 }
 
-/* svetlomodrÈ pozadie aj mimo kontajnera */
-.nis-shell {
-    min-height: 100vh;
-    background: radial-gradient(1200px 520px at 10% 0%, rgba(30,136,229,.18), transparent 60%), radial-gradient(900px 460px at 90% 0%, rgba(211,47,47,.10), transparent 55%), var(--nis-bg);
-}
-
-/* DASHBOARD WRAPPER */
-.nis-home {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 18px 12px;
-}
-
-/* NAVBAR */
+/* ===============================
+   NAVBAR (STABLE)
+================================ */
 .app-navbar {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 1020;
-    background: rgba(255,255,255,.72) !important;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    background: rgba(255,255,255,.72);
     border-bottom: 1px solid var(--nis-border);
     backdrop-filter: blur(10px);
 }
 
-.container-nis {
-    max-width: 1200px;
+.content {
+    padding-top: var(--nis-topbar-h);
+    padding-bottom: var(--nis-footerbar-h);
 }
 
-/* BRAND */
+/* ===============================
+   BRAND
+================================ */
 .nis-brand {
     display: flex;
     align-items: center;
     gap: .75rem;
-    text-decoration: none;
-    color: var(--nis-text) !important;
     font-weight: 950;
+    color: var(--nis-text);
+    text-decoration: none;
 }
 
 .nis-logo {
@@ -74,487 +71,127 @@ body {
     place-items: center;
     background: rgba(30,136,229,.14);
     border: 1px solid rgba(30,136,229,.22);
-    box-shadow: 0 10px 22px rgba(30,136,229,.12);
     color: var(--nis-primary);
-    font-weight: 950;
-    letter-spacing: .5px;
 }
 
-.nis-brand-text {
-    font-weight: 950;
-    letter-spacing: .2px;
-}
-
-/* TOP NAV LINKS (hover + active) */
+/* ===============================
+   TOP NAV LINKS
+================================ */
 .app-tabs {
     display: flex;
     align-items: center;
     gap: .45rem;
 }
 
-    .app-tabs .nav-item {
-        display: flex;
-        align-items: center;
-    }
-
     .app-tabs .nav-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
         height: 44px;
         padding: 0 1.05rem;
         border-radius: 12px;
-        border: 1px solid transparent;
-        color: rgba(15,23,42,.78) !important;
         font-weight: 850;
         line-height: 1;
-        background: transparent !important;
-        transition: background .15s ease,color .15s ease,border-color .15s ease,box-shadow .15s ease;
+        color: rgba(15,23,42,.78);
+        background: transparent;
+        border: 1px solid transparent;
     }
 
         .app-tabs .nav-link:hover {
-            color: var(--nis-primary) !important;
-            background: rgba(30,136,229,.10) !important;
+            background: rgba(30,136,229,.10);
+            color: var(--nis-primary);
             border-color: rgba(30,136,229,.22);
         }
 
         .app-tabs .nav-link.active {
-            color: #fff !important;
-            background: var(--nis-primary) !important;
-            border-color: rgba(30,136,229,.45);
-            box-shadow: 0 12px 26px rgba(30,136,229,.18);
+            background: var(--nis-primary);
+            color: #fff;
         }
 
-            .app-tabs .nav-link.active .bi {
-                color: #fff !important;
-            }
+/* ===============================
+   DROPDOWN ñ FIXED & CLEAN
+================================ */
 
-    .app-tabs .dropdown-toggle::after {
-        margin-left: .55rem;
-        opacity: .75;
-    }
-
-/* DROPDOWN */
-.nis-dd {
-    position: relative;
-}
-
-.nis-dd-menu {
+.dropdown-menu {
     border: 1px solid var(--nis-border);
     border-radius: 14px;
     padding: .45rem;
-    min-width: 220px;
-    box-shadow: 0 18px 44px rgba(15,23,42,.12);
+    min-width: 180px;
     background: rgba(255,255,255,.96);
-    margin-top: .6rem;
+    box-shadow: 0 18px 44px rgba(15,23,42,.12);
+    margin-top: 2px;
 }
 
-    .nis-dd-menu .dropdown-item {
+    /* dropdown items */
+    .dropdown-menu .dropdown-item {
         border-radius: 12px;
         padding: .55rem .75rem;
         font-weight: 800;
         color: rgba(15,23,42,.80);
     }
 
-        .nis-dd-menu .dropdown-item:hover {
+        .dropdown-menu .dropdown-item:hover,
+        .dropdown-menu .dropdown-item:focus {
             background: rgba(30,136,229,.10);
             color: var(--nis-primary);
         }
 
-        .nis-dd-menu .dropdown-item.active {
+        .dropdown-menu .dropdown-item.active {
             background: rgba(30,136,229,.16);
             color: var(--nis-primary);
         }
 
-@media (min-width:992px) {
-    .nis-dd:hover > .dropdown-menu {
-        display: block;
-    }
+/* caret */
+.dropdown-toggle::after {
+    margin-left: .45rem;
+    vertical-align: middle;
 }
 
-/* BUTTONS */
-.nis-btn {
-    border-radius: 12px;
-    font-weight: 900;
-}
-
-.btn-nis-primary {
-    background: var(--nis-primary) !important;
-    border-color: var(--nis-primary) !important;
-    color: #fff !important;
-}
-
-    .btn-nis-primary:hover {
-        filter: brightness(.96);
-        color: #fff !important;
-    }
-
-.btn-nis-outline {
-    border: 1px solid rgba(30,136,229,.30) !important;
-    color: var(--nis-primary) !important;
-    background: rgba(30,136,229,.05) !important;
-}
-
-    .btn-nis-outline:hover {
-        background: rgba(30,136,229,.12) !important;
-        color: var(--nis-primary) !important;
-    }
-
-/* CARD-NIS (tvoje wrappery) */
+/* ===============================
+   CARDS / UI
+================================ */
 .card-nis {
     background: var(--nis-card);
     border: 1px solid var(--nis-border);
     border-radius: 18px;
     box-shadow: 0 14px 32px rgba(15,23,42,.07);
-    overflow: hidden;
 }
 
     .card-nis > .card-header {
         background: rgba(30,136,229,.06);
-        border-bottom: 1px solid rgba(2,6,23,.08);
-        padding: .95rem 1rem;
         font-weight: 950;
     }
 
-    .card-nis > .card-body {
-        padding: 1rem;
-    }
-
-/* HERO */
-.nis-hero {
-    background: linear-gradient(135deg, rgba(30,136,229,.18), rgba(211,47,47,.08));
-    border: 1px solid var(--nis-border);
-    border-radius: 18px;
-    box-shadow: 0 18px 40px rgba(15,23,42,.08);
+/* ===============================
+   FOOTER
+================================ */
+.nis-footerbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--nis-footerbar-h);
+    background: rgba(255,255,255,.82);
+    border-top: 1px solid var(--nis-border);
+    backdrop-filter: blur(10px);
+    z-index: 1035;
 }
 
-/* KPI */
-.nis-kpi {
-    border-radius: 18px;
-    border: 1px solid rgba(2,6,23,.10);
-    background: rgba(255,255,255,.65);
-    padding: 14px 14px;
-}
-
-    .nis-kpi .kpi-title {
-        color: var(--nis-muted);
-        font-weight: 900;
-        font-size: .9rem;
-    }
-
-    .nis-kpi .kpi-value {
-        font-size: 1.65rem;
-        font-weight: 950;
-        line-height: 1.1;
-    }
-
-/* FEATURE BOXES */
-.nis-feature {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid rgba(2,6,23,.10);
-    border-radius: 14px;
-    background: rgba(255,255,255,.70);
-}
-
-.nis-feature-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: rgba(30,136,229,.12);
-    border: 1px solid rgba(30,136,229,.20);
-    color: var(--nis-primary);
-    font-size: 18px;
-}
-
-/* LIST */
-.nis-list {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-}
-
-    .nis-list li {
-        display: flex;
-        gap: 10px;
-        align-items: flex-start;
-        padding: 8px 0;
-        border-bottom: 1px dashed rgba(2,6,23,.10);
-    }
-
-        .nis-list li:last-child {
-            border-bottom: 0;
-        }
-
-    .nis-list .bi {
-        color: var(--nis-primary);
-        margin-top: 2px;
-    }
-
-/* NOTE */
-.nis-note {
-    border: 1px solid rgba(211,47,47,.18);
-    background: rgba(211,47,47,.06);
-    border-radius: 14px;
-    padding: 12px;
-}
-
-/* MODULE */
-.nis-module {
-    border: 1px solid rgba(2,6,23,.10);
-    border-radius: 14px;
-    padding: 12px;
-    background: rgba(255,255,255,.70);
-}
-
-/* MUTED */
-.nis-muted {
-    color: var(--nis-muted) !important;
-}
-
-/* TABLES: nech nie s˙ biele bloky na modrom */
+/* ===============================
+   TABLE FIX
+================================ */
 .table {
     --bs-table-bg: transparent;
 }
 
-    .table th, .table td {
+    .table th,
+    .table td {
         background: transparent;
     }
 
-/* MOBILE */
-@media (max-width:991px) {
-    .app-tabs {
-        gap: .35rem;
-    }
-
-        .app-tabs .nav-link {
-            height: 42px;
-            padding: 0 .9rem;
-        }
-}
-
-.nis-footerbar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 0 16px;
-    background: rgba(255,255,255,.82);
-    border-top: 1px solid rgba(2,6,23,.10);
-    backdrop-filter: blur(10px);
-    z-index: 9999;
-}
-
-.nis-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: #1e88e5;
-    box-shadow: 0 0 0 3px rgba(30,136,229,.14);
-}
-
-.nis-footer-right {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-variant-numeric: tabular-nums;
-}
-
-.nis-badge {
-    padding: 4px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(2,6,23,.10);
-    background: rgba(30,136,229,.08);
-}
-
-.nis-footerbar {
-    color: var(--nis-text);
-}
-
-    .nis-footerbar .nis-muted {
-        color: rgba(15,23,42,.65);
-    }
-
-:root {
-    --nis-topbar-h: 76px;
-    --nis-footerbar-h: 56px;
-}
-
-/* TOP BAR vûdy hore */
-.nis-topbar,
-.app-navbar {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1030;
-}
-
-/* CONTENT musÌ byù pod topbarom a nad footerom */
-.content {
-    padding-top: var(--nis-topbar-h) !important;
-    padding-bottom: calc(var(--nis-footerbar-h) + 10px) !important;
-}
-
-/* FOOTER vûdy dole */
-.nis-footerbar {
-    position: fixed !important;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--nis-footerbar-h);
-    z-index: 1035;
-}
-
-/* toto uû potom nepotrebujeö rieöiù cez body padding-bottom */
-body {
-    padding-bottom: 0 !important;
-}
-
 /* ===============================
-   FIX: zarovnanie navbar itemov
-   + farby hover (nie biele)
+   MOBILE
 ================================ */
-
-/* vöetky poloûky v navbar riadku nech s˙ na jednej osi */
-.app-navbar .navbar-nav,
-.app-navbar .navbar-nav .nav-item,
-.app-navbar .navbar-nav .nav-link {
-    display: flex;
-    align-items: center;
-}
-
-    /* nav-link jednotn· v˝öka a padding */
-    .app-navbar .navbar-nav .nav-link {
-        height: 44px;
-        padding: 0 1.05rem !important;
-        line-height: 1 !important;
+@media (max-width: 991px) {
+    .app-tabs .nav-link {
+        height: 42px;
+        padding: 0 .9rem;
     }
-
-/* dropdown toggle caret zarovnaù do stredu */
-.app-navbar .dropdown-toggle::after {
-    margin-left: .55rem;
-    vertical-align: middle !important;
-    position: relative;
-    top: 0; /* ak treba, daj 1px alebo -1px */
 }
-
-/* aby ti dropdown-toggle neprid·val in˙ farbu/pozadie pri hover */
-.app-navbar .nav-link.dropdown-toggle:hover,
-.app-navbar .nav-link:hover {
-    color: var(--nis-primary) !important;
-    background: rgba(30,136,229,.10) !important;
-    border-color: rgba(30,136,229,.22) !important;
-}
-
-/* ACTIVE stav nech nie je biely na bielom */
-.app-navbar .nav-link.active,
-.app-navbar .nav-link[aria-current="page"] {
-    color: #fff !important;
-    background: var(--nis-primary) !important;
-    border-color: rgba(30,136,229,.45) !important;
-}
-
-/* DROPDOWN MENU items - zruöiù biely hover */
-.app-navbar .dropdown-menu .dropdown-item {
-    color: rgba(15,23,42,.80) !important;
-    border-radius: 12px;
-}
-
-    .app-navbar .dropdown-menu .dropdown-item:hover,
-    .app-navbar .dropdown-menu .dropdown-item:focus {
-        background: rgba(30,136,229,.10) !important;
-        color: var(--nis-primary) !important;
-    }
-
-    /* aktÌvna poloûka v dropdown menu */
-    .app-navbar .dropdown-menu .dropdown-item.active,
-    .app-navbar .dropdown-menu .dropdown-item[aria-current="page"] {
-        background: rgba(30,136,229,.16) !important;
-        color: var(--nis-primary) !important;
-    }
-/* =========================================
-   NAVBAR ñ 100% zarovnanie brand + linkov
-========================================= */
-
-/* zruö default navbar padding (Bootstrap) */
-.app-navbar.navbar {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-}
-
-/* brand (logo + NIS) nech m· rovnak˙ v˝öku ako poloûky menu */
-.app-navbar .navbar-brand {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    margin: 0 1rem 0 0 !important;
-    height: 44px;
-    display: inline-flex !important;
-    align-items: center !important;
-}
-
-    /* text v brande nech nezvyöuje riadok */
-    .app-navbar .navbar-brand,
-    .app-navbar .navbar-brand * {
-        line-height: 1 !important;
-    }
-
-/* navbar collapse/nav nech s˙ zarovnanÈ na stred */
-.app-navbar .navbar-collapse {
-    align-items: center !important;
-}
-
-.app-navbar .navbar-nav {
-    align-items: center !important;
-}
-
-    /* vöetky nav-link (aj dropdown toggle) rovnak· v˝öka */
-    .app-navbar .navbar-nav .nav-link,
-    .app-navbar .navbar-nav .nav-link.dropdown-toggle {
-        height: 44px;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-    }
-
-/* caret (öÌpka) nech nie je vyööie/niûöie */
-.app-navbar .dropdown-toggle::after {
-    margin-left: .55rem;
-    vertical-align: middle !important;
-    position: relative;
-    top: 0; /* ak bude st·le o 1px mimo, daj top: 1px alebo -1px */
-}
-
-/* FIX: aby hover nebol biely */
-.app-navbar .nav-link:hover {
-    color: var(--nis-primary) !important;
-    background: rgba(30,136,229,.10) !important;
-    border-color: rgba(30,136,229,.22) !important;
-}
-/* sort hlaviËky v tabuæk·ch */
-.nis-th {
-    white-space: nowrap;
-}
-
-.nis-th-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: .35rem;
-    padding: 0;
-    text-decoration: none;
-    font-weight: 900;
-    color: rgba(15,23,42,.85);
-}
-
-    .nis-th-btn:hover {
-        color: var(--nis-primary);
-    }

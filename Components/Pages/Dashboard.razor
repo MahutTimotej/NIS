@@ -12,8 +12,9 @@
                 <div class="flex-grow-1">
                     <h1 class="mb-1">Nemocničný informačný systém</h1>
                     <div class="nis-muted">
-                        Prehľad pacientov, vyšetrení a personálu. Rýchly prístup k modulom a evidencia záznamov pre
-                        zdravotnícky personál.
+                        Prehľadná evidencia pacientov, vyšetrení a zdravotnej dokumentácie.
+                        Systém je navrhnutý tak, aby podporoval každodennú klinickú prax
+                        a rýchlu orientáciu v údajoch.
                     </div>
                 </div>
 
@@ -32,32 +33,32 @@
                     <div class="nis-kpi">
                         <div class="kpi-title">Pacienti</div>
                         <div class="kpi-value">@_pacienti</div>
-                        <div class="nis-muted small">v databáze</div>
+                        <div class="nis-muted small">evidovaných osôb</div>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <div class="nis-kpi">
                         <div class="kpi-title">Lekári</div>
                         <div class="kpi-value">@_lekari</div>
-                        <div class="nis-muted small">v evidencii</div>
+                        <div class="nis-muted small">zdravotnícky personál</div>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <div class="nis-kpi">
                         <div class="kpi-title">Vyšetrenia</div>
                         <div class="kpi-value">@_vysetrenia</div>
-                        <div class="nis-muted small">záznamy</div>
+                        <div class="nis-muted small">záznamov v systéme</div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- WORKFLOW + WHAT IT DOES -->
+    <!-- WORKFLOW -->
     <section class="row g-3 mb-3">
         <div class="col-12 col-lg-7">
             <div class="card-nis">
-                <div class="card-header">Denný workflow</div>
+                <div class="card-header">Denná práca v systéme</div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
@@ -65,8 +66,13 @@
                                 <div class="nis-feature-icon"><span class="bi bi-person-heart"></span></div>
                                 <div>
                                     <div class="fw-bold">Pacient</div>
-                                    <div class="nis-muted small">Vyhľadanie pacienta, edit údajov a prepojenie na záznamy.</div>
-                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/pacienti">Otvoriť pacientov</a>
+                                    <div class="nis-muted small">
+                                        Vyhľadanie pacienta, prehľad osobných údajov
+                                        a nadväzujúcich zdravotných záznamov.
+                                    </div>
+                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/pacienti">
+                                        Otvoriť evidenciu
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -76,8 +82,13 @@
                                 <div class="nis-feature-icon"><span class="bi bi-clipboard2-pulse-fill"></span></div>
                                 <div>
                                     <div class="fw-bold">Vyšetrenie</div>
-                                    <div class="nis-muted small">Vytvorenie a evidencia vyšetrenia, väzby na pacienta a personál.</div>
-                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/vysetrenia">Otvoriť vyšetrenia</a>
+                                    <div class="nis-muted small">
+                                        Záznam vyšetrenia vrátane výsledkov,
+                                        časovej osi a obrazovej dokumentácie.
+                                    </div>
+                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/vysetrenia">
+                                        Otvoriť vyšetrenia
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -87,8 +98,13 @@
                                 <div class="nis-feature-icon"><span class="bi bi-door-open-fill"></span></div>
                                 <div>
                                     <div class="fw-bold">Príjem</div>
-                                    <div class="nis-muted small">Evidencia príjmov a hospitalizácií podľa oddelení.</div>
-                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/prijmy">Otvoriť príjmy</a>
+                                    <div class="nis-muted small">
+                                        Evidencia hospitalizácií, oddelení
+                                        a priebehu pobytu pacienta.
+                                    </div>
+                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/prijmy">
+                                        Otvoriť príjmy
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -98,8 +114,13 @@
                                 <div class="nis-feature-icon"><span class="bi bi-receipt-cutoff"></span></div>
                                 <div>
                                     <div class="fw-bold">Predpis</div>
-                                    <div class="nis-muted small">Predpis liekov a evidencia položiek v databáze.</div>
-                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/predpisy">Otvoriť predpisy</a>
+                                    <div class="nis-muted small">
+                                        Predpis liekov a evidencia dávkovania
+                                        v nadväznosti na vyšetrenie.
+                                    </div>
+                                    <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/predpisy">
+                                        Otvoriť predpisy
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -108,28 +129,31 @@
                     <hr class="my-3" />
 
                     <div class="nis-muted">
-                        Všetky moduly majú full CRUD a vyhľadávanie priamo v stránke.
+                        Všetky záznamy sú prehľadne prepojené tak,
+                        aby bolo možné sledovať zdravotný stav pacienta v čase.
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- WHAT SYSTEM DOES -->
         <div class="col-12 col-lg-5">
             <div class="card-nis">
-                <div class="card-header">Čo systém rieši</div>
+                <div class="card-header">Čo systém podporuje</div>
                 <div class="card-body">
                     <ul class="nis-list">
-                        <li><span class="bi bi-check2-circle"></span> Evidencia pacientov a osobných údajov</li>
-                        <li><span class="bi bi-check2-circle"></span> Vyšetrenia, diagnózy, operácie</li>
-                        <li><span class="bi bi-check2-circle"></span> Oddelenia, izby a personál</li>
-                        <li><span class="bi bi-check2-circle"></span> Lieky a predpisy</li>
-                        <li><span class="bi bi-check2-circle"></span> Prehľad databázových väzieb (Oracle)</li>
+                        <li><span class="bi bi-check2-circle"></span> kontinuitu zdravotnej dokumentácie</li>
+                        <li><span class="bi bi-check2-circle"></span> prepojenie pacienta, lekára a oddelenia</li>
+                        <li><span class="bi bi-check2-circle"></span> archiváciu vyšetrení a obrazových dát</li>
+                        <li><span class="bi bi-check2-circle"></span> rýchlu orientáciu v histórii záznamov</li>
+                        <li><span class="bi bi-check2-circle"></span> jednotné prostredie pre klinickú prácu</li>
                     </ul>
 
                     <div class="nis-note mt-3">
-                        <div class="fw-bold mb-1">Poznámka</div>
+                        <div class="fw-bold mb-1">Zameranie systému</div>
                         <div class="nis-muted small">
-                            Toto je študentská aplikácia pre predmet Medicínska Informatika. Frontend je Blazor, dáta sú v Oracle DB.
+                            Dôraz je kladený na prehľadnosť, konzistenciu údajov
+                            a podporu rozhodovania v klinickej praxi.
                         </div>
                     </div>
                 </div>
@@ -137,86 +161,59 @@
         </div>
     </section>
 
-    <!-- MODULES GRID -->
+    <!-- MODULES -->
     <section class="card-nis mb-3">
-        <div class="card-header">Moduly</div>
+        <div class="card-header">Moduly systému</div>
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-12 col-md-4">
                     <div class="nis-module">
                         <div class="fw-bold"><span class="bi bi-hospital-fill me-2"></span> Oddelenia</div>
-                        <div class="nis-muted small">Správa oddelení, prepojenie na izby a personál.</div>
+                        <div class="nis-muted small">Organizačná štruktúra nemocnice.</div>
                         <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/oddelenia">Otvoriť</a>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <div class="nis-module">
                         <div class="fw-bold"><span class="bi bi-door-closed-fill me-2"></span> Izby</div>
-                        <div class="nis-muted small">Evidencia izieb v rámci oddelení.</div>
+                        <div class="nis-muted small">Rozmiestnenie pacientov.</div>
                         <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/izby">Otvoriť</a>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <div class="nis-module">
                         <div class="fw-bold"><span class="bi bi-bug-fill me-2"></span> Diagnózy</div>
-                        <div class="nis-muted small">Katalóg diagnóz používaných v systéme.</div>
+                        <div class="nis-muted small">Zoznam používaných diagnóz.</div>
                         <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/diagnozy">Otvoriť</a>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <div class="nis-module">
-                        <div class="fw-bold"><span class="bi bi-capsule-pill me-2"></span> Lieky</div>
-                        <div class="nis-muted small">Zoznam liekov pre predpisy.</div>
-                        <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/lieky">Otvoriť</a>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="nis-module">
-                        <div class="fw-bold"><span class="bi bi-scissors me-2"></span> Operácie</div>
-                        <div class="nis-muted small">Evidencia operácií a naviazaných záznamov.</div>
-                        <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/operacie">Otvoriť</a>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="nis-module">
-                        <div class="fw-bold"><span class="bi bi-person-badge-fill me-2"></span> Sestry</div>
-                        <div class="nis-muted small">Personál a prepojenie na oddelenia.</div>
-                        <a class="btn btn-sm nis-btn btn-nis-outline mt-2" href="/sestry">Otvoriť</a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- HELP -->
+    <!-- FUN FACTS -->
     <section class="card-nis">
-        <div class="card-header">Pomoc a tipy</div>
+        <div class="card-header">Zaujímavosti z medicíny</div>
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <div class="nis-muted small">
-                        Ak niečo padá na FK:
-                        <ul class="mt-2">
-                            <li>najprv vlož číselníky (kraj/okres/obec, špecializácie, oddelenia)</li>
-                            <li>potom osobné údaje</li>
-                            <li>až potom pacientov/lekárov/sestry</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="nis-muted small">
-                        Navigácia:
-                        <div class="mt-2 d-flex flex-wrap gap-2">
-                            <a class="btn btn-sm nis-btn btn-nis-outline" href="/pacienti">Pacienti</a>
-                            <a class="btn btn-sm nis-btn btn-nis-outline" href="/prijmy">Príjmy</a>
-                            <a class="btn btn-sm nis-btn btn-nis-outline" href="/vysetrenia">Vyšetrenia</a>
-                            <a class="btn btn-sm nis-btn btn-nis-outline" href="/predpisy">Predpisy</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <ul class="nis-list">
+                <li>
+                    <span class="bi bi-lightbulb"></span>
+                    Ľudská DNA je zhodná približne na 99,9 % u všetkých ľudí.
+                </li>
+                <li>
+                    <span class="bi bi-lightbulb"></span>
+                    Srdce dospelého človeka prečerpá približne 7 000 litrov krvi denne.
+                </li>
+                <li>
+                    <span class="bi bi-lightbulb"></span>
+                    Pečeň má schopnosť regenerácie aj po odstránení veľkej časti tkaniva.
+                </li>
+                <li>
+                    <span class="bi bi-lightbulb"></span>
+                    Dnešný deň je približne <strong>na polovici kalendárneho roka</strong>
+                    z pohľadu biologických rytmov populácie.
+                </li>
+            </ul>
         </div>
     </section>
 

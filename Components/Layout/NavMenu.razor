@@ -7,17 +7,19 @@
             <span class="nis-brand-text">NIS</span>
         </NavLink>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nisNav"
-                aria-controls="nisNav" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#nisNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="nisNav">
             <ul class="navbar-nav me-auto app-tabs">
 
+                <!-- EVIDENCIA -->
                 <li class="nav-item dropdown nis-dd">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="bi bi-archive-fill me-2"></span> Evidencia
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        Evidencia
                     </a>
                     <ul class="dropdown-menu nis-dd-menu">
                         <li><NavLink class="dropdown-item" href="/pacienti">Pacienti</NavLink></li>
@@ -26,39 +28,33 @@
                     </ul>
                 </li>
 
+                <!-- ZÁZNAMY -->
                 <li class="nav-item dropdown nis-dd">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="bi bi-journal-medical me-2"></span> Záznamy
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        Záznamy
                     </a>
                     <ul class="dropdown-menu nis-dd-menu">
                         <li><NavLink class="dropdown-item" href="/prijmy">Príjmy</NavLink></li>
                         <li><NavLink class="dropdown-item" href="/vysetrenia">Vyšetrenia</NavLink></li>
                         <li><NavLink class="dropdown-item" href="/operacie">Operácie</NavLink></li>
-                        <li><hr class="dropdown-divider" /></li>
                         <li><NavLink class="dropdown-item" href="/predpisy">Predpisy</NavLink></li>
                     </ul>
                 </li>
 
+                <!-- ČÍSELNÍKY -->
                 <li class="nav-item dropdown nis-dd">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="bi bi-list-check me-2"></span> Číselníky
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        Číselníky
                     </a>
                     <ul class="dropdown-menu nis-dd-menu">
-                        <li><NavLink class="dropdown-item" href="/oddelenia">Oddelenia</NavLink></li>
-                        <li><NavLink class="dropdown-item" href="/izby">Izby</NavLink></li>
                         <li><NavLink class="dropdown-item" href="/diagnozy">Diagnózy</NavLink></li>
                         <li><NavLink class="dropdown-item" href="/lieky">Lieky</NavLink></li>
+                        <li><NavLink class="dropdown-item" href="/oddelenia">Oddelenia</NavLink></li>
+                        <li><NavLink class="dropdown-item" href="/izby">Izby</NavLink></li>
                     </ul>
                 </li>
 
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="/about">
-                        <span class="bi bi-info-circle me-2"></span> About
-                    </NavLink>
-                </li>
             </ul>
-
-            @* Oracle XE badge preč *@
         </div>
     </div>
 </nav>

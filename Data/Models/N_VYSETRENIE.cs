@@ -14,14 +14,14 @@ public partial class N_VYSETRENIE
     public DateTime DATUM { get; set; }
 
     public string? TYP_VYSETRENIA { get; set; }
-
     public string? VYSLEDOK { get; set; }
 
     public byte[]? SNIMOK { get; set; }
-
+    public string? SNIMOK_MIME { get; set; }
+    public string? SNIMOK_NAZOV { get; set; }
     public virtual N_LEKAR ID_LEKARANavigation { get; set; } = null!;
 
     public virtual N_PACIENT ID_PACIENTANavigation { get; set; } = null!;
 
-    public virtual ICollection<N_PREDPI> N_PREDPIs { get; set; } = new List<N_PREDPI>();
+    public virtual ICollection<N_PREDPI> N_PREDPIs { get; set; } = [];
 }

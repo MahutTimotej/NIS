@@ -1,0 +1,226 @@
+﻿@typeparam TItem
+
+@using Microsoft.EntityFrameworkCore
+@using NIS.Data
+@inject IDbContextFactory<NisDbContext> DbFactory
+@implements IDisposable
+
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+    <div>
+        <h2 class="mb-0">@Title</h2>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <div class="nis-muted small">@Subtitle</div>
+        }
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <input class="form-control"
+               style="min-width: 320px;"
+               placeholder="@SearchPlaceholder"
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <span class="nis-badge">@_filteredCount</span>
+    </div>
+</div>
+
+<div class="card-nis">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        @Header(_hctx)
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (_loading)
+                    {
+                        <tr>
+                            <td colspan="@Colspan" class="p-4 nis-muted">Načítavam...</td>
+                        </tr>
+                    }
+                    else if (_pageItems.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="@Colspan" class="p-4 nis-muted">Žiadne záznamy.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in _pageItems)
+                        {
+                            @Row(item)
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-3">
+            <div class="nis-muted small">
+                Zobrazené: <strong>@_pageItemsCount</strong> z <strong>@_filteredCount</strong>.
+                Strana <strong>@(_pageIndex + 1)</strong> / <strong>@_pageCount</strong>.
+                Max @PageSize na stranu.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm nis-btn btn-nis-outline"
+                        @onclick="Prev" disabled="@(_pageIndex == 0)">
+                    Prev
+                </button>
+
+                <button class="btn btn-sm nis-btn btn-nis-outline"
+                        @onclick="Next" disabled="@(_pageIndex >= _pageCount - 1)">
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string SearchPlaceholder { get; set; } = "Hľadať...";
+    [Parameter] public int PageSize { get; set; } = 50;
+    [Parameter] public int Colspan { get; set; } = 1;
+
+    [Parameter, EditorRequired]
+    public Func<NisDbContext, IQueryable<TItem>> Query { get; set; } = default!;
+
+    [Parameter]
+    public Func<IQueryable<TItem>, string, IQueryable<TItem>>? Filter { get; set; }
+
+    [Parameter]
+    public Func<IQueryable<TItem>, string, bool, IQueryable<TItem>>? Sort { get; set; }
+
+    [Parameter] public string? DefaultSortCol { get; set; }
+    [Parameter] public bool DefaultSortAsc { get; set; } = true;
+
+    [Parameter, EditorRequired] public RenderFragment<HeaderContext> Header { get; set; } = default!;
+    [Parameter, EditorRequired] public RenderFragment<TItem> Row { get; set; } = default!;
+
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private CancellationTokenSource _cts = new();
+
+    private HeaderContext _hctx = default!;
+    private string _search = "";
+    private string _sortCol = "";
+    private bool _sortAsc = true;
+
+    private int _pageIndex;
+    private int _filteredCount;
+    private int _pageCount = 1;
+    private int _pageItemsCount;
+
+    private bool _loading = true;
+    private List<TItem> _pageItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hctx = new HeaderContext(this);
+        _sortCol = DefaultSortCol ?? "";
+        _sortAsc = DefaultSortAsc;
+        await ReloadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _pageIndex = 0;
+        await ReloadAsync();
+    }
+
+    internal async Task SortByAsync(string col)
+    {
+        if (_sortCol == col) _sortAsc = !_sortAsc;
+        else { _sortCol = col; _sortAsc = true; }
+
+        _pageIndex = 0;
+        await ReloadAsync();
+    }
+
+    private async Task Prev()
+    {
+        if (_pageIndex == 0) return;
+        _pageIndex--;
+        await ReloadAsync();
+    }
+
+    private async Task Next()
+    {
+        if (_pageIndex >= _pageCount - 1) return;
+        _pageIndex++;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        await _gate.WaitAsync(token);
+        try
+        {
+            _loading = true;
+            await InvokeAsync(StateHasChanged);
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            IQueryable<TItem> q = Query(db);
+
+            var term = _search.Trim();
+            if (!string.IsNullOrEmpty(term) && Filter is not null)
+                q = Filter(q, term);
+
+            _filteredCount = await q.CountAsync(token);
+
+            _pageCount = Math.Max(1, (int)Math.Ceiling(_filteredCount / (double)PageSize));
+            _pageIndex = Math.Min(_pageIndex, _pageCount - 1);
+
+            if (Sort is not null && !string.IsNullOrWhiteSpace(_sortCol))
+                q = Sort(q, _sortCol, _sortAsc);
+
+            _pageItems = await q
+                .Skip(_pageIndex * PageSize)
+                .Take(PageSize)
+                .ToListAsync(token);
+
+            _pageItemsCount = _pageItems.Count;
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            _loading = false;
+            _gate.Release();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+        _gate.Dispose();
+    }
+
+    public sealed class HeaderContext
+    {
+        private readonly NisTable<TItem> _p;
+        internal HeaderContext(NisTable<TItem> parent) => _p = parent;
+
+        public Task Sort(string col) => _p.SortByAsync(col);
+
+        public MarkupString Icon(string col)
+            => _p._sortCol != col
+                ? (MarkupString)""
+                : _p._sortAsc
+                    ? (MarkupString)" <span class=\"bi bi-caret-up-fill\"></span>"
+                    : (MarkupString)" <span class=\"bi bi-caret-down-fill\"></span>";
+    }
+}

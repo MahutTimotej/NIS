@@ -1,42 +1,40 @@
 ﻿@page "/lekari"
-@inject NisDbContext Db
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
 
-<h3>Lekári</h3>
+<NisTable TItem="N_LEKAR"
+          Title="Lekári"
+          Subtitle="Zoznam lekárov."
+          SearchPlaceholder="Hľadať (ID, rodné číslo, oddelenie)..."
+          PageSize="50"
+          Colspan="4"
+          Query="q"
+          Filter="f"
+          Sort="s">
 
-@if (items is null)
-{
-    <p>Načítavam...</p>
-}
-else
-{
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Rodné číslo</th>
-                <th>Špecializácia (ID)</th>
-                <th>Oddelenie (ID)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var l in items)
-            {
-                <tr>
-                    <td>@l.ID_LEKARA</td>
-                    <td>@l.RODNE_CISLO</td>
-                    <td>@l.ID_SPECIALIZACIE</td>
-                    <td>@l.ID_ODDELENIA</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    <Header Context="h">
+    <th><button class="btn btn-link nis-th-btn" @onclick="() => h.Sort(nameof(N_LEKAR.ID_LEKARA))">ID @h.Icon(nameof(N_LEKAR.ID_LEKARA))</button></th>
+    <th>Rodné číslo</th>
+    <th>Špecializácia</th>
+    <th>Oddelenie</th>
+    </Header>
+
+    <Row Context="l">
+        <tr>
+            <td>@l.ID_LEKARA</td>
+            <td>@l.RODNE_CISLO</td>
+            <td>@l.ID_SPECIALIZACIE</td>
+            <td>@l.ID_ODDELENIA</td>
+        </tr>
+    </Row>
+</NisTable>
 
 @code {
-    private List<N_LEKAR>? items;
-
-    protected override async Task OnInitializedAsync()
-    {
-        items = await Db.N_LEKARs.AsNoTracking().ToListAsync();
-    }
+    IQueryable<N_LEKAR> q(NisDbContext db) => db.N_LEKARs.AsNoTracking();
+    IQueryable<N_LEKAR> f(IQueryable<N_LEKAR> q, string t)
+        => q.Where(x =>
+            EF.Functions.Like(x.ID_LEKARA.ToString(), $"%{t}%") ||
+            EF.Functions.Like(x.RODNE_CISLO, $"%{t}%"));
+    IQueryable<N_LEKAR> s(IQueryable<N_LEKAR> q, string c, bool a)
+        => a ? q.OrderBy(x => x.ID_LEKARA) : q.OrderByDescending(x => x.ID_LEKARA);
 }
