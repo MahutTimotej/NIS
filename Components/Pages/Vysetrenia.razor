@@ -26,7 +26,6 @@
         border: 1px solid rgba(0,0,0,.15);
         border-radius: 8px;
         padding: 6px;
-        box-shadow: 0 12px 30px rgba(0,0,0,.15);
         display: none;
     }
 
@@ -37,8 +36,6 @@
     .snimok-preview img {
         max-width: 220px;
         max-height: 220px;
-        display: block;
-        border-radius: 4px;
     }
 </style>
 
@@ -48,7 +45,9 @@
         <div class="nis-muted small">Vytvorenie a prehľad vyšetrení.</div>
     </div>
 
-    <button class="btn nis-btn btn-nis-primary" @onclick="OpenCreate" disabled="@_busy">
+    <button class="btn nis-btn btn-nis-primary"
+            @onclick="OpenCreate"
+            disabled="@_busy">
         Nové vyšetrenie
     </button>
 </div>
@@ -67,41 +66,51 @@
 
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="form-label">Pacient (ID)</label>
-                        <InputNumber class="form-control" @bind-Value="_create.IdPacienta" />
+                        <InputNumber class="form-control"
+                                     placeholder="Pacient ID"
+                                     @bind-Value="_create.IdPacienta" />
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label">Lekár (ID)</label>
-                        <InputNumber class="form-control" @bind-Value="_create.IdLekara" />
+                        <InputNumber class="form-control"
+                                     placeholder="Lekár ID"
+                                     @bind-Value="_create.IdLekara" />
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label">Dátum a čas</label>
-                        <InputText class="form-control" type="datetime-local" @bind-Value="_datumText" />
+                        <InputText class="form-control"
+                                   type="datetime-local"
+                                   @bind-Value="_datumText" />
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label">Typ vyšetrenia</label>
-                        <InputText class="form-control" @bind-Value="_create.TypVysetrenia" />
+                        <InputText class="form-control"
+                                   placeholder="Typ vyšetrenia"
+                                   @bind-Value="_create.TypVysetrenia" />
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">Výsledok</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="_create.Vysledok" />
+                        <InputTextArea class="form-control"
+                                       rows="3"
+                                       placeholder="Výsledok"
+                                       @bind-Value="_create.Vysledok" />
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">Snímok</label>
                         <InputFile OnChange="OnFileSelected" />
                     </div>
                 </div>
 
                 <div class="mt-3 d-flex gap-2">
-                    <button type="submit" class="btn nis-btn btn-nis-primary" disabled="@_busy">
+                    <button type="submit"
+                            class="btn nis-btn btn-nis-primary"
+                            disabled="@_busy">
                         Uložiť
                     </button>
-                    <button type="button" class="btn nis-btn btn-nis-outline" @onclick="CloseCreate">
+
+                    <button type="button"
+                            class="btn nis-btn btn-nis-outline"
+                            @onclick="CloseCreate">
                         Zrušiť
                     </button>
                 </div>
@@ -134,6 +143,7 @@
             <td>@v.DATUM</td>
             <td>@v.TYP_VYSETRENIA</td>
             <td class="nis-muted">@v.VYSLEDOK</td>
+
             <td class="snimok-cell">
                 @if (v.SNIMOK != null)
                 {
@@ -142,7 +152,7 @@
                         Stiahnuť
                     </button>
 
-                    @if (v.SNIMOK_MIME != null && v.SNIMOK_MIME.StartsWith("image/"))
+                    @if (v.SNIMOK_MIME?.StartsWith("image/") == true)
                     {
                         <div class="snimok-preview">
                             <img src="data:@v.SNIMOK_MIME;base64,@Convert.ToBase64String(v.SNIMOK)" />
@@ -174,7 +184,7 @@
 
     void OpenCreate()
     {
-        _create = new CreateModel();
+        _create = new();
         _datumText = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
         _fileBytes = null;
         _createOpen = true;
@@ -184,11 +194,10 @@
 
     async Task OnFileSelected(InputFileChangeEventArgs e)
     {
-        var file = e.File;
-        _create.Snimok = file;
+        _create.Snimok = e.File;
 
         using var ms = new MemoryStream();
-        await file.OpenReadStream(50 * 1024 * 1024).CopyToAsync(ms);
+        await e.File.OpenReadStream(50 * 1024 * 1024).CopyToAsync(ms);
         _fileBytes = ms.ToArray();
     }
 
@@ -198,6 +207,7 @@
     async Task CreateAsync()
     {
         _busy = true;
+
         try
         {
             _create.Datum = DateTime.Parse(_datumText);
@@ -222,7 +232,7 @@
         }
         catch (Exception ex)
         {
-            Notify.Error(ex.Message);
+            Notify.Error("Upload zlyhal: " + ex.Message);
         }
         finally
         {

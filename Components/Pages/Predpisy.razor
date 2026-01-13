@@ -4,10 +4,14 @@
 @using Microsoft.EntityFrameworkCore
 @using NIS.Data
 @using NIS.Data.Models
+@using NIS.Services
 
 @inject IDbContextFactory<NisDbContext> DbFactory
+@inject NotificationService Notify
 
 <h2 class="mb-3">Predpisy</h2>
+
+<Alert />
 
 <div class="card-nis mb-3">
     <div class="card-header fw-semibold">
@@ -26,10 +30,27 @@
                                  @bind-Value="_edit.IdVysetrenia" />
                 </div>
 
-                <div class="col-md-3">
+                <!-- SUKL lazy search -->
+                <div class="col-md-4 position-relative">
                     <InputText class="form-control"
-                               placeholder="SUKL kód (napr. 00405)"
-                               @bind-Value="_edit.SuklKod" />
+                               placeholder="SUKL kód alebo názov lieku"
+                               @bind-Value="_suklSearch"
+                               @oninput="OnSuklInput" />
+
+                    @if (_suklResults.Any())
+                    {
+                        <div class="list-group position-absolute w-100 shadow"
+                             style="z-index:2000; max-height:260px; overflow:auto;">
+                            @foreach (var l in _suklResults)
+                            {
+                                <button type="button"
+                                        class="list-group-item list-group-item-action"
+                                        @onclick="() => SelectSukl(l)">
+                                    <strong>@l.SUKL_KOD</strong> – @l.NAZOV
+                                </button>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="col-md-2">
@@ -44,7 +65,7 @@
                                @bind-Value="_edit.Mnozstvo" />
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <InputDate class="form-control"
                                @bind-Value="_edit.Datum" />
                 </div>
@@ -77,7 +98,7 @@
 <NisTable @key="_tableKey"
           TItem="PredpisRow"
           Title="Zoznam predpisov"
-          SearchPlaceholder="Hľadať (ID, vyšetrenie, SUKL, liek, dávkovanie)..."
+          SearchPlaceholder="Hľadať (ID, vyšetrenie, SUKL, liek)..."
           PageSize="50"
           Colspan="8"
           Query="Query"
@@ -86,7 +107,7 @@
           DefaultSortCol="@nameof(PredpisRow.Datum)"
           DefaultSortAsc="false">
 
-    <Header Context="h">
+    <Header>
     <th>ID</th>
     <th>Vyšetrenie</th>
     <th>SUKL</th>
@@ -118,36 +139,28 @@
             </td>
         </tr>
     </Row>
-
 </NisTable>
 
 @code {
 
-    private int _tableKey = 0;
-    private bool _isEdit = false;
+    private int _tableKey;
+    private bool _isEdit;
 
-    private List<N_LIEK> _lieky = new();
+    private string _suklSearch = "";
+    private List<N_LIEK> _suklResults = new();
 
-    private PredpisEdit _edit = new()
-    {
-        Datum = DateTime.Today
-    };
+    private PredpisEdit _edit = new() { Datum = DateTime.Today };
 
     private sealed class PredpisEdit
     {
         public decimal Id { get; set; }
-
         public decimal IdVysetrenia { get; set; }
-
-        public string SuklKod { get; set; } = "";
-
+        public string? SuklKod { get; set; }
         public string? Davkovanie { get; set; }
         public string? Mnozstvo { get; set; }
         public string? Poznamka { get; set; }
-
         public DateTime Datum { get; set; }
     }
-
 
     private sealed class PredpisRow
     {
@@ -160,10 +173,31 @@
         public string? Mnozstvo { get; set; }
     }
 
-    protected override async Task OnInitializedAsync()
+    /* lazy SUKL lookup */
+    private async Task OnSuklInput(ChangeEventArgs e)
     {
+        var text = _suklSearch?.Trim();
+        _suklResults.Clear();
+
+        if (string.IsNullOrWhiteSpace(text) || text.Length < 2)
+            return;
+
         await using var db = await DbFactory.CreateDbContextAsync();
-        _lieky = await db.N_LIEKs.AsNoTracking().OrderBy(x => x.NAZOV).ToListAsync();
+
+        _suklResults = await db.N_LIEKs.AsNoTracking()
+            .Where(x =>
+                EF.Functions.Like(x.SUKL_KOD, $"%{text}%") ||
+                EF.Functions.Like(x.NAZOV.ToUpper(), $"%{text.ToUpper()}%"))
+            .OrderBy(x => x.NAZOV)
+            .Take(20)
+            .ToListAsync();
+    }
+
+    private void SelectSukl(N_LIEK l)
+    {
+        _edit.SuklKod = l.SUKL_KOD;
+        _suklSearch = $"{l.SUKL_KOD} – {l.NAZOV}";
+        _suklResults.Clear();
     }
 
     IQueryable<PredpisRow> Query(NisDbContext db)
@@ -186,8 +220,7 @@
             EF.Functions.Like(x.Id.ToString(), $"%{t}%") ||
             EF.Functions.Like(x.IdVysetrenia.ToString(), $"%{t}%") ||
             EF.Functions.Like((x.SuklKod ?? "").ToUpper(), $"%{s}%") ||
-            EF.Functions.Like((x.Liek ?? "").ToUpper(), $"%{s}%") ||
-            EF.Functions.Like((x.Davkovanie ?? "").ToUpper(), $"%{s}%")
+            EF.Functions.Like((x.Liek ?? "").ToUpper(), $"%{s}%")
         );
     }
 
@@ -209,6 +242,8 @@
             p.MNOZSTVO = _edit.Mnozstvo;
             p.POZNAMKA = _edit.Poznamka;
             p.DATUM_PREDPISU = _edit.Datum;
+
+            Notify.Success("Predpis bol upravený.");
         }
         else
         {
@@ -221,10 +256,11 @@
                 POZNAMKA = _edit.Poznamka,
                 DATUM_PREDPISU = _edit.Datum
             });
+
+            Notify.Success("Predpis bol vytvorený.");
         }
 
         await db.SaveChangesAsync();
-
         CancelEdit();
         _tableKey++;
     }
@@ -246,6 +282,7 @@
             Datum = p.DATUM_PREDPISU
         };
 
+        _suklSearch = p.SUKL_KOD ?? "";
         _isEdit = true;
     }
 
@@ -253,6 +290,8 @@
     {
         _isEdit = false;
         _edit = new PredpisEdit { Datum = DateTime.Today };
+        _suklSearch = "";
+        _suklResults.Clear();
     }
 
     private async Task DeleteAsync(decimal id)
@@ -264,6 +303,7 @@
         db.N_PREDPIs.Remove(p);
         await db.SaveChangesAsync();
 
+        Notify.Success("Predpis bol zmazaný.");
         _tableKey++;
     }
 }
